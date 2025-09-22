@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow-lg border-0">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <div class="fs-1 text-primary mb-3">📱</div>
+                        <h2 class="fw-bold">Welcome to Marivor</h2>
+                        <p class="text-muted">Enter your phone number to get started</p>
+                    </div>
+
+                    <!-- Phone Entry Form -->
+                    <form id="phoneForm" action="{{ url_for('send_otp') }}" method="POST">
+                        <div class="mb-4">
+                            <label for="phone_number" class="form-label fw-semibold">Phone Number</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light">🇵🇭 +63</span>
+                                <input type="tel" 
+                                       class="form-control form-control-lg" 
+                                       id="phone_number" 
+                                       name="phone_number" 
+                                       placeholder="9171234567"
+                                       pattern="[0-9]{10}" 
+                                       maxlength="10"
+                                       required>
+                            </div>
+                            <div class="form-text">
+                                <small class="text-muted">
+                                    <i class="bi bi-info-circle"></i> 
+                                    Enter 10 digits (without +63). Example: 9171234567
+                                </small>
+                            </div>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg" id="sendOtpBtn">
+                                <i class="bi bi-telephone-fill"></i> Send Verification Code
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Alternative Registration -->
+                    <div class="text-center my-4">
+                        <div class="d-flex align-items-center">
+                            <hr class="flex-grow-1">
+                            <span class="px-3 text-muted">OR</span>
+                            <hr class="flex-grow-1">
+                        </div>
+                    </div>
+
+                    <!-- Face Login Section -->
+                    <div class="mb-3">
+                        <button type="button" class="btn btn-outline-success btn-lg w-100" onclick="toggleFaceLogin()">
+                            <i class="bi bi-key-fill"></i> Login with Face Code
+                        </button>
+                    </div>
+
+                    <!-- Face Code Input (Hidden by default) -->
+                    <div id="faceLoginSection" style="display: none;">
+                        <form action="{{ url_for('face_login') }}" method="POST">
+                            <div class="mb-3">
+                                <label for="face_code" class="form-label fw-semibold">6-Digit Face Code</label>
+                                <input type="text" 
+                                       class="form-control form-control-lg text-center" 
+                                       id="face_code" 
+                                       name="face_code" 
+                                       placeholder="000000"
+                                       pattern="[0-9]{6}" 
+                                       maxlength="6"
+                                       style="letter-spacing: 0.3em; font-size: 1.5rem;"
+                                       required>
+                                <div class="form-text">
+                                    <small class="text-muted">
+                                        <i class="bi bi-info-circle"></i> 
+                                        Enter the 6-digit code from your face registration
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-success btn-lg">
+                                    <i class="bi bi-unlock-fill"></i> Login with Code
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="d-grid mt-3">
+                        <a href="{{ url_for('face_register') }}" class="btn btn-outline-primary btn-lg">
+                            <i class="bi bi-camera-fill"></i> New? Register with Face Detection
+                        </a>
+                    </div>
+
+                    <!-- Features -->
+                    <div class="mt-4">
+                        <hr class="my-4">
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="fs-5 text-success mb-2">🔐</div>
+                                <small class="text-muted">Secure</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="fs-5 text-info mb-2">⚡</div>
+                                <small class="text-muted">Fast</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="fs-5 text-warning mb-2">📱</div>
+                                <small class="text-muted">Simple</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Info -->
+                    <div class="alert alert-info mt-4" role="alert">
+                        <div class="d-flex">
+                            <div class="me-2">
+                                <i class="bi bi-shield-check"></i>
+                            </div>
+                            <div>
+                                <strong>Why phone verification?</strong><br>
+                                <small>We use SMS verification to keep your account secure and ensure fast delivery updates.</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.getElementById('phoneForm').addEventListener('submit', function(e) {
+    const btn = document.getElementById('sendOtpBtn');
+    const phoneInput = document.getElementById('phone_number');
+    
+    // Validate Philippine phone number format
+    const phone = phoneInput.value.trim();
+    if (!/^[0-9]{10}$/.test(phone)) {
+        e.preventDefault();
+        alert('Please enter a valid 10-digit Philippine phone number (without +63)');
+        phoneInput.focus();
+        return;
+    }
+    
+    // Show loading state
+    btn.innerHTML = '<i class="spinner-border spinner-border-sm me-2"></i>Sending...';
+    btn.disabled = true;
+});
+
+// Auto-format phone number input
+document.getElementById('phone_number').addEventListener('input', function(e) {
+    // Remove any non-digit characters
+    let value = e.target.value.replace(/\D/g, '');
+    
+    // Limit to 10 digits
+    if (value.length > 10) {
+        value = value.substring(0, 10);
+    }
+    
+    e.target.value = value;
+});
+
+// Face code input formatting
+document.getElementById('face_code').addEventListener('input', function(e) {
+    // Remove any non-digit characters
+    let value = e.target.value.replace(/\D/g, '');
+    
+    // Limit to 6 digits
+    if (value.length > 6) {
+        value = value.substring(0, 6);
+    }
+    
+    e.target.value = value;
+});
+
+// Toggle face login section
+function toggleFaceLogin() {
+    const faceSection = document.getElementById('faceLoginSection');
+    const phoneForm = document.getElementById('phoneForm');
+    
+    if (faceSection.style.display === 'none') {
+        faceSection.style.display = 'block';
+        phoneForm.style.display = 'none';
+        document.getElementById('face_code').focus();
+    } else {
+        faceSection.style.display = 'none';
+        phoneForm.style.display = 'block';
+        document.getElementById('phone_number').focus();
+    }
+}
+</script>
+{% endblock %}
