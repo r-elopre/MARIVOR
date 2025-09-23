@@ -19,7 +19,7 @@ products = cursor.fetchall()
 for product in products:
     name, category, price, stock = product
     emoji = "🐟" if category == "Fish" else "🥬"
-    print(f"  {emoji} {name} - ${price} (Stock: {stock})")
+    print(f"  {emoji} {name} - ₱{price} (Stock: {stock})")
 
 conn.close()
 print(f"\n✅ Database is working perfectly!")

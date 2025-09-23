@@ -92,6 +92,320 @@ class SupabaseClient:
             print(f"Error updating user photos: {e}")
             return False
     
+    def set_admin_status(self, user_id: int, is_admin: bool = True) -> bool:
+        """Set admin status for a user"""
+        try:
+            response = self.client.table('users').update({'is_admin': is_admin}).eq('id', user_id).execute()
+            return len(response.data) > 0
+        except Exception as e:
+            print(f"Error setting admin status: {e}")
+            return False
+    
+    def is_user_admin(self, user_id: int) -> bool:
+        """Check if user is admin"""
+        try:
+            response = self.client.table('users').select('is_admin').eq('id', user_id).execute()
+            if response.data and len(response.data) > 0:
+                return response.data[0].get('is_admin', False)
+            return False
+        except Exception as e:
+            print(f"Error checking admin status: {e}")
+            return False
+    
+    # Product Management Methods
+    def get_all_products(self) -> List[Dict[str, Any]]:
+        """Get all products"""
+        try:
+            response = self.client.table('products').select('*').execute()
+            return response.data if response.data else []
+        except Exception as e:
+            print(f"Error getting products: {e}")
+            return []
+    
+    def get_products_by_category(self, category: str) -> List[Dict[str, Any]]:
+        """Get products by category"""
+        try:
+            response = self.client.table('products').select('*').eq('category', category).execute()
+            return response.data if response.data else []
+        except Exception as e:
+            print(f"Error getting products by category: {e}")
+            return []
+    
+    def add_product(self, name: str, category: str, price: float, stock: int, image_url: str = "") -> Dict[str, Any]:
+        """Add a new product"""
+        try:
+            product_data = {
+                'name': name,
+                'category': category,
+                'price': price,
+                'stock': stock,
+                'image_url': image_url,
+                'created_at': datetime.utcnow().isoformat()
+            }
+            
+            response = self.client.table('products').insert(product_data).execute()
+            return {'success': True, 'data': response.data[0] if response.data else None}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def update_product(self, product_id: int, **kwargs) -> bool:
+        """Update product details"""
+        try:
+            response = self.client.table('products').update(kwargs).eq('id', product_id).execute()
+            return len(response.data) > 0
+        except Exception as e:
+            print(f"Error updating product: {e}")
+            return False
+    
+    def delete_product(self, product_id: int) -> bool:
+        """Delete a product"""
+        try:
+            response = self.client.table('products').delete().eq('id', product_id).execute()
+            return len(response.data) > 0
+        except Exception as e:
+            print(f"Error deleting product: {e}")
+            return False
+    
+    # Image Storage Methods
+    def upload_product_image(self, file_data: bytes, filename: str, content_type: str = 'image/jpeg') -> Dict[str, Any]:
+        """Upload product image to Supabase storage"""
+        try:
+            # Generate unique filename
+            file_extension = filename.split('.')[-1] if '.' in filename else 'jpg'
+            unique_filename = f"products/{uuid.uuid4()}.{file_extension}"
+            
+            # Upload to Supabase storage
+            response = self.storage_client.storage.from_('products').upload(
+                unique_filename, 
+                file_data,
+                file_options={'content-type': content_type}
+            )
+            
+            if response.status_code in [200, 201]:
+                # Get public URL
+                public_url = self.storage_client.storage.from_('products').get_public_url(unique_filename)
+                return {
+                    'success': True, 
+                    'url': public_url,
+                    'filename': unique_filename
+                }
+            else:
+                return {'success': False, 'error': f'Upload failed with status {response.status_code}'}
+                
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def delete_product_image(self, filename: str) -> bool:
+        """Delete product image from Supabase storage"""
+        try:
+            response = self.storage_client.storage.from_('products').remove([filename])
+            return response.status_code == 200
+        except Exception as e:
+            print(f"Error deleting image: {e}")
+            return False
+    
+    def add_product_with_image(self, name: str, category: str, price: float, stock: int, unit: bool,
+                              image_file_data: bytes = None, image_filename: str = None, 
+                              image_url: str = "") -> Dict[str, Any]:
+        """Add a new product with optional image upload"""
+        try:
+            final_image_url = image_url
+            uploaded_filename = None
+            
+            # If image file is provided, upload it
+            if image_file_data and image_filename:
+                # Determine content type from filename
+                content_type = 'image/jpeg'
+                if image_filename.lower().endswith('.png'):
+                    content_type = 'image/png'
+                elif image_filename.lower().endswith('.gif'):
+                    content_type = 'image/gif'
+                elif image_filename.lower().endswith('.webp'):
+                    content_type = 'image/webp'
+                
+                upload_result = self.upload_product_image(image_file_data, image_filename, content_type)
+                
+                if upload_result['success']:
+                    final_image_url = upload_result['url']
+                    uploaded_filename = upload_result['filename']
+                else:
+                    return {'success': False, 'error': f"Image upload failed: {upload_result['error']}"}
+            
+            # Create product with image URL
+            product_data = {
+                'name': name,
+                'category': category,
+                'price': price,
+                'stock': stock,
+                'unit': unit,
+                'image_url': final_image_url,
+                'created_at': datetime.utcnow().isoformat()
+            }
+            
+            response = self.client.table('products').insert(product_data).execute()
+            
+            if response.data:
+                return {
+                    'success': True, 
+                    'data': response.data[0],
+                    'uploaded_filename': uploaded_filename
+                }
+            else:
+                # If product creation failed and we uploaded an image, clean it up
+                if uploaded_filename:
+                    self.delete_product_image(uploaded_filename)
+                return {'success': False, 'error': 'Failed to create product'}
+                
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def update_product_with_image(self, product_id: int, name: str = None, category: str = None, 
+                                 price: float = None, stock: int = None, unit: bool = None,
+                                 image_file_data: bytes = None, image_filename: str = None, 
+                                 image_url: str = None) -> Dict[str, Any]:
+        """Update a product with optional image upload"""
+        try:
+            update_data = {}
+            uploaded_filename = None
+            old_image_url = None
+            
+            # Get current product data to check for existing image
+            current_product = self.get_product_by_id(product_id)
+            if current_product:
+                old_image_url = current_product.get('image_url', '')
+            
+            # Update basic fields
+            if name is not None:
+                update_data['name'] = name
+            if category is not None:
+                update_data['category'] = category
+            if price is not None:
+                update_data['price'] = price
+            if stock is not None:
+                update_data['stock'] = stock
+            if unit is not None:
+                update_data['unit'] = unit
+            
+            # Handle image update
+            if image_file_data and image_filename:
+                # Upload new image
+                content_type = 'image/jpeg'
+                if image_filename.lower().endswith('.png'):
+                    content_type = 'image/png'
+                elif image_filename.lower().endswith('.gif'):
+                    content_type = 'image/gif'
+                elif image_filename.lower().endswith('.webp'):
+                    content_type = 'image/webp'
+                
+                upload_result = self.upload_product_image(image_file_data, image_filename, content_type)
+                
+                if upload_result['success']:
+                    update_data['image_url'] = upload_result['url']
+                    uploaded_filename = upload_result['filename']
+                else:
+                    return {'success': False, 'error': f"Image upload failed: {upload_result['error']}"}
+            elif image_url is not None:
+                # Update with new URL (empty string to clear)
+                update_data['image_url'] = image_url
+            
+            # Update the product
+            if update_data:
+                response = self.client.table('products').update(update_data).eq('id', product_id).execute()
+                
+                if response.data:
+                    # If we uploaded a new image and the update was successful,
+                    # delete the old image from storage (if it was stored in our bucket)
+                    if uploaded_filename and old_image_url and 'supabase' in old_image_url and '/products/' in old_image_url:
+                        try:
+                            # Extract filename from old URL
+                            old_filename = old_image_url.split('/products/')[-1]
+                            self.delete_product_image(f"products/{old_filename}")
+                        except:
+                            pass  # Don't fail the update if old image deletion fails
+                    
+                    return {
+                        'success': True, 
+                        'data': response.data[0],
+                        'uploaded_filename': uploaded_filename
+                    }
+                else:
+                    # If product update failed and we uploaded an image, clean it up
+                    if uploaded_filename:
+                        self.delete_product_image(uploaded_filename)
+                    return {'success': False, 'error': 'Failed to update product'}
+            else:
+                return {'success': False, 'error': 'No data to update'}
+                
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def get_product_by_id(self, product_id: int) -> Optional[Dict[str, Any]]:
+        """Get a specific product by ID"""
+        try:
+            response = self.client.table('products').select('*').eq('id', product_id).execute()
+            return response.data[0] if response.data else None
+        except Exception as e:
+            print(f"Error getting product by ID: {e}")
+            return None
+    
+    # Order Management Methods
+    def create_order(self, user_id: int, items: List[Dict], total_price: float) -> Dict[str, Any]:
+        """Create a new order"""
+        try:
+            order_data = {
+                'user_id': user_id,
+                'items': items,  # Store as JSON
+                'total_price': total_price,
+                'status': 'processed',  # Default status
+                'created_at': datetime.utcnow().isoformat()
+            }
+            
+            response = self.client.table('orders').insert(order_data).execute()
+            return {'success': True, 'data': response.data[0] if response.data else None}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def get_orders_by_status(self, status: str) -> List[Dict[str, Any]]:
+        """Get orders by status"""
+        try:
+            response = self.client.table('orders').select('*, users(username, phone_number)').eq('status', status).order('created_at', desc=True).execute()
+            return response.data if response.data else []
+        except Exception as e:
+            print(f"Error getting orders by status: {e}")
+            return []
+    
+    def get_all_orders(self) -> List[Dict[str, Any]]:
+        """Get all orders with user information"""
+        try:
+            response = self.client.table('orders').select('*, users(username, phone_number)').order('created_at', desc=True).execute()
+            return response.data if response.data else []
+        except Exception as e:
+            print(f"Error getting all orders: {e}")
+            return []
+    
+    def update_order_status(self, order_id: int, status: str) -> bool:
+        """Update order status"""
+        try:
+            valid_statuses = ['processed', 'on_delivery']
+            if status not in valid_statuses:
+                print(f"Invalid status: {status}. Valid statuses: {valid_statuses}")
+                return False
+            
+            response = self.client.table('orders').update({'status': status}).eq('id', order_id).execute()
+            return len(response.data) > 0
+        except Exception as e:
+            print(f"Error updating order status: {e}")
+            return False
+    
+    def get_user_orders(self, user_id: int) -> List[Dict[str, Any]]:
+        """Get orders for a specific user"""
+        try:
+            response = self.client.table('orders').select('*').eq('user_id', user_id).order('created_at', desc=True).execute()
+            return response.data if response.data else []
+        except Exception as e:
+            print(f"Error getting user orders: {e}")
+            return []
+    
     # Storage Methods
     def upload_face_photo(self, user_id: str, photo_data: str, direction: str) -> Optional[str]:
         """

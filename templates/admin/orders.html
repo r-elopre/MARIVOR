@@ -1,0 +1,187 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Orders Management - Admin Panel{% endblock %}
+{% block page_title %}Orders Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-0">Order Management</h4>
+        <p class="text-muted">Manage customer orders and delivery status</p>
+    </div>
+    <div class="btn-group" role="group">
+        <a href="{{ url_for('admin_orders', status='all') }}" 
+           class="btn {% if current_filter == 'all' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+            All Orders
+        </a>
+        <a href="{{ url_for('admin_orders', status='processed') }}" 
+           class="btn {% if current_filter == 'processed' %}btn-warning{% else %}btn-outline-warning{% endif %}">
+            Processed
+        </a>
+        <a href="{{ url_for('admin_orders', status='on_delivery') }}" 
+           class="btn {% if current_filter == 'on_delivery' %}btn-info{% else %}btn-outline-info{% endif %}">
+            On Delivery
+        </a>
+    </div>
+</div>
+
+{% if orders %}
+<div class="admin-table">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>Order ID</th>
+                    <th>Customer</th>
+                    <th>Phone</th>
+                    <th>Items</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr>
+                    <td>
+                        <strong>#{{ order.id }}</strong>
+                    </td>
+                    <td>
+                        {% if order.users %}
+                            {{ order.users.username }}
+                        {% else %}
+                            <span class="text-muted">Unknown User</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if order.users %}
+                            {{ order.users.phone_number }}
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#itemsModal{{ order.id }}">
+                            <i class="bi bi-list"></i> View Items
+                        </button>
+                        
+                        <!-- Items Modal -->
+                        <div class="modal fade" id="itemsModal{{ order.id }}" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Order #{{ order.id }} Items</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        {% if order.items %}
+                                            {% for item in order.items %}
+                                            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                                <div>
+                                                    <strong>{{ item.name }}</strong>
+                                                    <br>
+                                                    <small class="text-muted">{{ item.category }}</small>
+                                                </div>
+                                                <div class="text-end">
+                                                    <span class="badge bg-secondary">Qty: {{ item.quantity }}</span>
+                                                    <br>
+                                                    <small>₱{{ "%.2f"|format(item.price) }} each</small>
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <p class="text-muted">No items found</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <strong>₱{{ "%.2f"|format(order.total_price) }}</strong>
+                    </td>
+                    <td>
+                        <span class="status-badge status-{{ order.status }}">
+                            {% if order.status == 'processed' %}
+                                <i class="bi bi-clock"></i> Processed
+                            {% elif order.status == 'on_delivery' %}
+                                <i class="bi bi-truck"></i> On Delivery
+                            {% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        {{ order.created_at[:10] }}
+                        <br>
+                        <small class="text-muted">{{ order.created_at[11:16] }}</small>
+                    </td>
+                    <td>
+                        <div class="btn-group-vertical btn-group-sm" role="group">
+                            {% if order.status == 'processed' %}
+                                <button type="button" class="btn btn-info btn-sm" onclick="updateOrderStatus({{ order.id }}, 'on_delivery')">
+                                    <i class="bi bi-truck"></i> Mark for Delivery
+                                </button>
+                            {% elif order.status == 'on_delivery' %}
+                                <button type="button" class="btn btn-success btn-sm" onclick="updateOrderStatus({{ order.id }}, 'processed')">
+                                    <i class="bi bi-arrow-counterclockwise"></i> Back to Processed
+                                </button>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="admin-table text-center py-5">
+    <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+    <h5 class="mt-3 text-muted">No Orders Found</h5>
+    <p class="text-muted">
+        {% if current_filter == 'all' %}
+            No orders have been placed yet.
+        {% elif current_filter == 'processed' %}
+            No processed orders waiting for action.
+        {% elif current_filter == 'on_delivery' %}
+            No orders are currently out for delivery.
+        {% endif %}
+    </p>
+    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-primary">
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+    </a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function updateOrderStatus(orderId, newStatus) {
+    if (!confirm(`Are you sure you want to update order #${orderId} to ${newStatus.replace('_', ' ')}?`)) {
+        return;
+    }
+    
+    try {
+        const formData = new FormData();
+        formData.append('order_id', orderId);
+        formData.append('status', newStatus);
+        
+        const response = await fetch('/admin/orders/update_status/' + orderId, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Reload the page to show updated status
+            location.reload();
+        } else {
+            alert('Error updating order status: ' + result.error);
+        }
+    } catch (error) {
+        alert('Error updating order status: ' + error.message);
+    }
+}
+</script>
+{% endblock %}

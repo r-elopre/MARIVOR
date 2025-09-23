@@ -22,44 +22,38 @@ def get_db_connection():
     return conn
 
 def get_products_by_category(category=None, limit=None):
-    """Get products filtered by category"""
-    conn = get_db_connection()
-    if category:
-        if limit:
-            query = "SELECT * FROM products WHERE category = ? AND is_active = 1 ORDER BY created_at DESC LIMIT ?"
-            products = conn.execute(query, (category, limit)).fetchall()
+    """Get products filtered by category from Supabase"""
+    try:
+        supabase_client = get_supabase_client()
+        if category:
+            products = supabase_client.get_products_by_category(category)
         else:
-            query = "SELECT * FROM products WHERE category = ? AND is_active = 1 ORDER BY created_at DESC"
-            products = conn.execute(query, (category,)).fetchall()
-    else:
-        if limit:
-            query = "SELECT * FROM products WHERE is_active = 1 ORDER BY created_at DESC LIMIT ?"
-            products = conn.execute(query, (limit,)).fetchall()
-        else:
-            query = "SELECT * FROM products WHERE is_active = 1 ORDER BY created_at DESC"
-            products = conn.execute(query).fetchall()
-    
-    conn.close()
-    return products
+            products = supabase_client.get_all_products()
+        
+        # Apply limit if specified
+        if limit and products:
+            products = products[:limit]
+        
+        return products
+    except Exception as e:
+        print(f"Error getting products by category: {e}")
+        return []
 
 def get_featured_products():
-    """Get featured products for home page (mix of fish and vegetables)"""
-    conn = get_db_connection()
-    
-    # Get 2 fish and 2 vegetable products
-    fish_products = conn.execute(
-        "SELECT * FROM products WHERE category = 'Fish' AND is_active = 1 ORDER BY created_at DESC LIMIT 2"
-    ).fetchall()
-    
-    vegetable_products = conn.execute(
-        "SELECT * FROM products WHERE category = 'Vegetable' AND is_active = 1 ORDER BY created_at DESC LIMIT 2"
-    ).fetchall()
-    
-    conn.close()
-    
-    # Combine and return
-    featured = list(fish_products) + list(vegetable_products)
-    return featured
+    """Get featured products for home page (mix of fish and vegetables) from Supabase"""
+    try:
+        supabase_client = get_supabase_client()
+        
+        # Get products by category
+        fish_products = supabase_client.get_products_by_category('Fish')[:2]
+        vegetable_products = supabase_client.get_products_by_category('Vegetable')[:2]
+        
+        # Combine and return
+        featured = fish_products + vegetable_products
+        return featured
+    except Exception as e:
+        print(f"Error getting featured products: {e}")
+        return []
 
 def is_logged_in():
     """Check if user is logged in"""
@@ -307,6 +301,263 @@ def register_face():
     except Exception as e:
         print(f"Face registration error: {e}")
         return jsonify({'success': False, 'error': f'Registration failed: {str(e)}'})
+
+# Admin routes
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    """Admin login page"""
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        # Hardcoded admin credentials (you can change these)
+        ADMIN_USERNAME = "marivor_admin"
+        ADMIN_PASSWORD = "admin123!@#"
+        
+        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+            session['is_admin'] = True
+            session['admin_username'] = username
+            flash('Admin login successful!', 'success')
+            return redirect(url_for('admin_dashboard'))
+        else:
+            flash('Invalid admin credentials!', 'error')
+    
+    return render_template('admin/login.html')
+
+@app.route('/admin')
+@app.route('/admin/dashboard')
+def admin_dashboard():
+    """Admin dashboard - overview"""
+    if not session.get('is_admin'):
+        flash('Admin access required!', 'error')
+        return redirect(url_for('admin_login'))
+    
+    try:
+        supabase_client = get_supabase_client()
+        
+        # Get statistics
+        all_products = supabase_client.get_all_products()
+        processed_orders = supabase_client.get_orders_by_status('processed')
+        delivery_orders = supabase_client.get_orders_by_status('on_delivery')
+        
+        stats = {
+            'total_products': len(all_products),
+            'fish_products': len([p for p in all_products if p['category'] == 'Fish']),
+            'vegetable_products': len([p for p in all_products if p['category'] == 'Vegetable']),
+            'processed_orders': len(processed_orders),
+            'delivery_orders': len(delivery_orders)
+        }
+        
+        return render_template('admin/dashboard.html', stats=stats)
+    except Exception as e:
+        flash(f'Error loading dashboard: {str(e)}', 'error')
+        return render_template('admin/dashboard.html', stats={})
+
+@app.route('/admin/orders')
+def admin_orders():
+    """Admin orders management"""
+    if not session.get('is_admin'):
+        flash('Admin access required!', 'error')
+        return redirect(url_for('admin_login'))
+    
+    try:
+        supabase_client = get_supabase_client()
+        status_filter = request.args.get('status', 'all')
+        
+        if status_filter == 'all':
+            orders = supabase_client.get_all_orders()
+        else:
+            orders = supabase_client.get_orders_by_status(status_filter)
+        
+        return render_template('admin/orders.html', orders=orders, current_filter=status_filter)
+    except Exception as e:
+        flash(f'Error loading orders: {str(e)}', 'error')
+        return render_template('admin/orders.html', orders=[], current_filter='all')
+
+@app.route('/admin/orders/update_status/<int:order_id>', methods=['POST'])
+def admin_update_order_status(order_id):
+    """Update order status"""
+    if not session.get('is_admin'):
+        return jsonify({'success': False, 'error': 'Admin access required'})
+    
+    try:
+        new_status = request.form.get('status')
+        
+        supabase_client = get_supabase_client()
+        success = supabase_client.update_order_status(order_id, new_status)
+        
+        if success:
+            flash(f'Order #{order_id} status updated to {new_status}!', 'success')
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': False, 'error': 'Failed to update order status'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/admin/products')
+def admin_products():
+    """Admin products management"""
+    if not session.get('is_admin'):
+        flash('Admin access required!', 'error')
+        return redirect(url_for('admin_login'))
+    
+    try:
+        supabase_client = get_supabase_client()
+        products = supabase_client.get_all_products()
+        return render_template('admin/products.html', products=products)
+    except Exception as e:
+        flash(f'Error loading products: {str(e)}', 'error')
+        return render_template('admin/products.html', products=[])
+
+@app.route('/admin/products/add', methods=['GET', 'POST'])
+def admin_add_product():
+    """Add new product"""
+    if not session.get('is_admin'):
+        flash('Admin access required!', 'error')
+        return redirect(url_for('admin_login'))
+    
+    if request.method == 'POST':
+        try:
+            name = request.form.get('name')
+            category = request.form.get('category')
+            price = float(request.form.get('price'))
+            stock = int(request.form.get('stock'))
+            unit = bool(request.form.get('unit'))  # True if checked, False if unchecked
+            
+            # Handle file upload (required)
+            image_file = request.files.get('image_file')
+            
+            if not image_file or not image_file.filename:
+                flash('Please upload an image file.', 'error')
+                return render_template('admin/add_product.html')
+            
+            # Validate file type
+            allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+            file_extension = image_file.filename.rsplit('.', 1)[1].lower() if '.' in image_file.filename else ''
+            
+            if file_extension not in allowed_extensions:
+                flash('Invalid file type. Please upload PNG, JPG, JPEG, GIF, or WebP images only.', 'error')
+                return render_template('admin/add_product.html')
+            
+            # Validate file size (5MB limit)
+            image_file_data = image_file.read()
+            if len(image_file_data) > 5 * 1024 * 1024:  # 5MB
+                flash('File size too large. Please upload an image smaller than 5MB.', 'error')
+                return render_template('admin/add_product.html')
+            
+            supabase_client = get_supabase_client()
+            
+            # Use the method that handles image upload
+            result = supabase_client.add_product_with_image(
+                name, category, price, stock, unit,
+                image_file_data, image_file.filename, ""
+            )
+            
+            if result['success']:
+                flash(f'Product "{name}" added successfully!', 'success')
+                return redirect(url_for('admin_products'))
+            else:
+                flash(f'Error adding product: {result["error"]}', 'error')
+        except Exception as e:
+            flash(f'Error adding product: {str(e)}', 'error')
+    
+    return render_template('admin/add_product.html')
+
+@app.route('/admin/products/edit/<int:product_id>', methods=['GET', 'POST'])
+def admin_edit_product(product_id):
+    """Edit existing product"""
+    if not session.get('is_admin'):
+        flash('Admin access required!', 'error')
+        return redirect(url_for('admin_login'))
+    
+    try:
+        supabase_client = get_supabase_client()
+        
+        if request.method == 'POST':
+            name = request.form.get('name')
+            category = request.form.get('category')
+            price = float(request.form.get('price')) if request.form.get('price') else None
+            stock = int(request.form.get('stock')) if request.form.get('stock') else None
+            unit = bool(request.form.get('unit'))  # True if checked, False if unchecked
+            
+            # Handle file upload (optional for edit)
+            image_file = request.files.get('image_file')
+            image_file_data = None
+            image_filename = None
+            
+            if image_file and image_file.filename:
+                # Validate file type
+                allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+                file_extension = image_file.filename.rsplit('.', 1)[1].lower() if '.' in image_file.filename else ''
+                
+                if file_extension not in allowed_extensions:
+                    flash('Invalid file type. Please upload PNG, JPG, JPEG, GIF, or WebP images only.', 'error')
+                    # Get product data for the form
+                    products = supabase_client.get_all_products()
+                    product = next((p for p in products if p['id'] == product_id), None)
+                    return render_template('admin/edit_product.html', product=product)
+                
+                # Validate file size (5MB limit)
+                image_file_data = image_file.read()
+                if len(image_file_data) > 5 * 1024 * 1024:  # 5MB
+                    flash('File size too large. Please upload an image smaller than 5MB.', 'error')
+                    # Get product data for the form
+                    products = supabase_client.get_all_products()
+                    product = next((p for p in products if p['id'] == product_id), None)
+                    return render_template('admin/edit_product.html', product=product)
+                
+                image_filename = image_file.filename
+            
+            # Use the new method that handles image upload
+            result = supabase_client.update_product_with_image(
+                product_id, name, category, price, stock, unit,
+                image_file_data, image_filename, None
+            )
+            
+            if result['success']:
+                flash('Product updated successfully!', 'success')
+                return redirect(url_for('admin_products'))
+            else:
+                flash(f'Error updating product: {result["error"]}', 'error')
+        
+        # Get product data for the form
+        products = supabase_client.get_all_products()
+        product = next((p for p in products if p['id'] == product_id), None)
+        
+        if not product:
+            flash('Product not found!', 'error')
+            return redirect(url_for('admin_products'))
+        
+        return render_template('admin/edit_product.html', product=product)
+    except Exception as e:
+        flash(f'Error: {str(e)}', 'error')
+        return redirect(url_for('admin_products'))
+
+@app.route('/admin/products/delete/<int:product_id>', methods=['POST'])
+def admin_delete_product(product_id):
+    """Delete product"""
+    if not session.get('is_admin'):
+        return jsonify({'success': False, 'error': 'Admin access required'})
+    
+    try:
+        supabase_client = get_supabase_client()
+        success = supabase_client.delete_product(product_id)
+        
+        if success:
+            flash('Product deleted successfully!', 'success')
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': False, 'error': 'Failed to delete product'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/admin/logout')
+def admin_logout():
+    """Admin logout"""
+    session.pop('is_admin', None)
+    session.pop('admin_username', None)
+    flash('Admin logged out successfully!', 'success')
+    return redirect(url_for('home'))
 
 # Error handlers
 @app.errorhandler(404)

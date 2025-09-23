@@ -93,9 +93,14 @@
                                 <div class="mt-auto">
                                     <div class="row align-items-center">
                                         <div class="col-7">
-                                            <span class="h4 text-primary fw-bold">${{ "%.2f"|format(product.price) }}</span>
+                                            <span class="h4 text-primary fw-bold">₱{{ "%.2f"|format(product.price) }}</span>
                                             <div class="small text-muted">
                                                 <i class="bi bi-box"></i> Stock: {{ product.stock }} left
+                                                {% if product.unit %}
+                                                    <br><i class="bi bi-scale"></i> Sold per kilogram
+                                                {% else %}
+                                                    <br><i class="bi bi-circle"></i> Sold per piece
+                                                {% endif %}
                                             </div>
                                         </div>
                                         <div class="col-5 text-end">

@@ -1,0 +1,148 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Products Management - Admin Panel{% endblock %}
+{% block page_title %}Products Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-0">Product Management</h4>
+        <p class="text-muted">Manage your store inventory</p>
+    </div>
+    <a href="{{ url_for('admin_add_product') }}" class="btn btn-success">
+        <i class="bi bi-plus-circle"></i> Add New Product
+    </a>
+</div>
+
+{% if products %}
+<div class="admin-table">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Product</th>
+                    <th>Category</th>
+                    <th>Price</th>
+                    <th>Stock</th>
+                    <th>Image</th>
+                    <th>Added</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for product in products %}
+                <tr>
+                    <td>
+                        <strong>{{ product.id }}</strong>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            {% if product.image_url %}
+                                <img src="{{ product.image_url }}" alt="{{ product.name }}" 
+                                     class="rounded me-2" width="40" height="40" style="object-fit: cover;">
+                            {% else %}
+                                <div class="bg-light rounded me-2 d-flex align-items-center justify-content-center" 
+                                     style="width: 40px; height: 40px;">
+                                    <i class="bi bi-image text-muted"></i>
+                                </div>
+                            {% endif %}
+                            <div>
+                                <strong>{{ product.name }}</strong>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge {% if product.category == 'Fish' %}bg-info{% else %}bg-success{% endif %}">
+                            <i class="bi {% if product.category == 'Fish' %}bi-water{% else %}bi-flower2{% endif %}"></i>
+                            {{ product.category }}
+                        </span>
+                    </td>
+                    <td>
+                        <strong>₱{{ "%.2f"|format(product.price) }}</strong>
+                        <br>
+                        <small class="text-muted">
+                            {% if product.unit %}
+                                <i class="bi bi-scale"></i> per kg
+                            {% else %}
+                                <i class="bi bi-circle"></i> per piece
+                            {% endif %}
+                        </small>
+                    </td>
+                    <td>
+                        {% if product.stock > 10 %}
+                            <span class="badge bg-success">{{ product.stock }} in stock</span>
+                        {% elif product.stock > 0 %}
+                            <span class="badge bg-warning">{{ product.stock }} left</span>
+                        {% else %}
+                            <span class="badge bg-danger">Out of stock</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if product.image_url %}
+                            <a href="{{ product.image_url }}" target="_blank" class="btn btn-sm btn-outline-info">
+                                <i class="bi bi-eye"></i> View
+                            </a>
+                        {% else %}
+                            <span class="text-muted">No image</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {{ product.created_at[:10] }}
+                    </td>
+                    <td>
+                        <div class="btn-group-vertical btn-group-sm" role="group">
+                            <a href="{{ url_for('admin_edit_product', product_id=product.id) }}" 
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-pencil"></i> Edit
+                            </a>
+                            <button type="button" class="btn btn-outline-danger btn-sm" 
+                                    onclick="deleteProduct({{ product.id }}, '{{ product.name }}')">
+                                <i class="bi bi-trash"></i> Delete
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="admin-table text-center py-5">
+    <i class="bi bi-grid-3x3-gap text-muted" style="font-size: 3rem;"></i>
+    <h5 class="mt-3 text-muted">No Products Found</h5>
+    <p class="text-muted">Start building your inventory by adding your first product.</p>
+    <a href="{{ url_for('admin_add_product') }}" class="btn btn-success">
+        <i class="bi bi-plus-circle"></i> Add First Product
+    </a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function deleteProduct(productId, productName) {
+    if (!confirm(`Are you sure you want to delete "${productName}"? This action cannot be undone.`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/admin/products/delete/${productId}`, {
+            method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Reload the page to show updated product list
+            location.reload();
+        } else {
+            alert('Error deleting product: ' + result.error);
+        }
+    } catch (error) {
+        alert('Error deleting product: ' + error.message);
+    }
+}
+</script>
+{% endblock %}

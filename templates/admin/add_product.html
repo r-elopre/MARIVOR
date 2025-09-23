@@ -1,0 +1,202 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Add Product - Admin Panel{% endblock %}
+{% block page_title %}Add New Product{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="admin-table">
+            <div class="p-4">
+                <div class="d-flex align-items-center mb-4">
+                    <a href="{{ url_for('admin_products') }}" class="btn btn-outline-secondary me-3">
+                        <i class="bi bi-arrow-left"></i>
+                    </a>
+                    <div>
+                        <h5 class="mb-0">Add New Product</h5>
+                        <p class="text-muted mb-0">Fill in the product details below</p>
+                    </div>
+                </div>
+                
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Product Name *</label>
+                        <input type="text" class="form-control" id="name" name="name" required 
+                               placeholder="Enter product name (e.g., Fresh Salmon, Organic Spinach)">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="category" class="form-label">Category *</label>
+                        <select class="form-select" id="category" name="category" required>
+                            <option value="">Select category</option>
+                            <option value="Fish">Fish</option>
+                            <option value="Vegetable">Vegetable</option>
+                        </select>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="price" class="form-label">Price (PHP) *</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">₱</span>
+                                    <input type="number" class="form-control" id="price" name="price" 
+                                           step="0.01" min="0" required placeholder="0.00">
+                                </div>
+                                <div class="form-text" id="price-hint">Price per piece</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="stock" class="form-label">Stock Quantity *</label>
+                                <input type="number" class="form-control" id="stock" name="stock" 
+                                       min="0" required placeholder="0">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Unit Selection -->
+                    <div class="mb-3">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title mb-3">
+                                    <i class="bi bi-scale"></i> Pricing Unit
+                                </h6>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="unit" name="unit" value="true">
+                                    <label class="form-check-label" for="unit">
+                                        <strong>Sold by Kilogram</strong>
+                                    </label>
+                                    <div class="form-text">
+                                        <span id="unit-description">
+                                            <i class="bi bi-info-circle"></i> 
+                                            <span id="unit-text">Currently set to: <strong>Per Piece</strong> (for big fish, individual items)</span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label">Product Image</label>
+                        
+                        <!-- Image Upload Section -->
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="image_file" class="form-label">
+                                        <i class="bi bi-cloud-upload"></i> Upload Image from Device *
+                                    </label>
+                                    <input type="file" class="form-control" id="image_file" name="image_file" 
+                                           accept="image/*" required>
+                                    <div class="form-text">
+                                        <i class="bi bi-info-circle"></i> 
+                                        Supported formats: JPG, PNG, GIF, WebP. Max size: 5MB
+                                    </div>
+                                </div>
+                                
+                                <!-- Image Preview -->
+                                <div id="image-preview-container" style="display: none;">
+                                    <label class="form-label">Preview:</label>
+                                    <div class="text-center">
+                                        <img id="image-preview" class="img-thumbnail" style="max-width: 300px; max-height: 300px;" alt="Image preview">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title"><i class="bi bi-lightbulb"></i> Quick Tips</h6>
+                                <ul class="mb-0 small">
+                                    <li>Use descriptive names like "Fresh Atlantic Salmon" or "Organic Baby Spinach"</li>
+                                    <li>Set competitive prices based on market rates</li>
+                                    <li>Keep stock quantities updated for accurate inventory</li>
+                                    <li>Use high-quality images for better customer appeal</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('admin_products') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-plus-circle"></i> Add Product
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// File upload preview functionality
+document.getElementById('image_file').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    const previewContainer = document.getElementById('image-preview-container');
+    const preview = document.getElementById('image-preview');
+    
+    if (file) {
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            alert('Please select a valid image file.');
+            this.value = '';
+            previewContainer.style.display = 'none';
+            return;
+        }
+        
+        // Validate file size (5MB limit)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('File size must be less than 5MB.');
+            this.value = '';
+            previewContainer.style.display = 'none';
+            return;
+        }
+        
+        // Show preview
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            previewContainer.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+        
+    } else {
+        previewContainer.style.display = 'none';
+    }
+});
+
+// Unit checkbox functionality
+document.getElementById('unit').addEventListener('change', function() {
+    const priceHint = document.getElementById('price-hint');
+    const unitText = document.getElementById('unit-text');
+    
+    if (this.checked) {
+        priceHint.textContent = 'Price per kilogram';
+        unitText.innerHTML = 'Currently set to: <strong>Per Kilogram</strong> (for small fish, vegetables, bulk items)';
+    } else {
+        priceHint.textContent = 'Price per piece';
+        unitText.innerHTML = 'Currently set to: <strong>Per Piece</strong> (for big fish, individual items)';
+    }
+});
+
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const fileInput = document.getElementById('image_file');
+    
+    if (!fileInput.files[0]) {
+        e.preventDefault();
+        alert('Please upload an image file.');
+        return false;
+    }
+});
+</script>
+{% endblock %}

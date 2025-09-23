@@ -1,0 +1,210 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Edit Product - Admin Panel{% endblock %}
+{% block page_title %}Edit Product{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="admin-table">
+            <div class="p-4">
+                <div class="d-flex align-items-center mb-4">
+                    <a href="{{ url_for('admin_products') }}" class="btn btn-outline-secondary me-3">
+                        <i class="bi bi-arrow-left"></i>
+                    </a>
+                    <div>
+                        <h5 class="mb-0">Edit Product #{{ product.id }}</h5>
+                        <p class="text-muted mb-0">Update product details</p>
+                    </div>
+                </div>
+                
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Product Name *</label>
+                        <input type="text" class="form-control" id="name" name="name" 
+                               value="{{ product.name }}" required 
+                               placeholder="Enter product name">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="category" class="form-label">Category *</label>
+                        <select class="form-select" id="category" name="category" required>
+                            <option value="Fish" {% if product.category == 'Fish' %}selected{% endif %}>Fish</option>
+                            <option value="Vegetable" {% if product.category == 'Vegetable' %}selected{% endif %}>Vegetable</option>
+                        </select>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="price" class="form-label">Price (PHP) *</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">₱</span>
+                                    <input type="number" class="form-control" id="price" name="price" 
+                                           step="0.01" min="0" value="{{ product.price }}" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="stock" class="form-label">Stock Quantity *</label>
+                                <input type="number" class="form-control" id="stock" name="stock" 
+                                       min="0" value="{{ product.stock }}" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Unit Selection -->
+                    <div class="mb-3">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title mb-3">
+                                    <i class="bi bi-scale"></i> Pricing Unit
+                                </h6>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="unit" name="unit" value="true"
+                                           {% if product.unit %}checked{% endif %}>
+                                    <label class="form-check-label" for="unit">
+                                        <strong>Sold by Kilogram</strong>
+                                    </label>
+                                    <div class="form-text">
+                                        <span id="unit-description">
+                                            <i class="bi bi-info-circle"></i> 
+                                            <span id="unit-text">
+                                                {% if product.unit %}
+                                                    Currently set to: <strong>Per Kilogram</strong> (for small fish, vegetables, bulk items)
+                                                {% else %}
+                                                    Currently set to: <strong>Per Piece</strong> (for big fish, individual items)
+                                                {% endif %}
+                                            </span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label">Product Image</label>
+                        
+                        <!-- Current Image Display -->
+                        {% if product.image_url %}
+                        <div class="mb-3">
+                            <label class="form-label">Current Image:</label>
+                            <div class="text-center">
+                                <img src="{{ product.image_url }}" alt="{{ product.name }}" 
+                                     id="current-image" class="img-thumbnail" 
+                                     style="max-width: 300px; max-height: 300px;">
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Image Upload Section -->
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="image_file" class="form-label">
+                                        <i class="bi bi-cloud-upload"></i> Upload New Image from Device
+                                    </label>
+                                    <input type="file" class="form-control" id="image_file" name="image_file" 
+                                           accept="image/*">
+                                    <div class="form-text">
+                                        <i class="bi bi-info-circle"></i> 
+                                        Supported formats: JPG, PNG, GIF, WebP. Max size: 5MB. Leave empty to keep current image.
+                                    </div>
+                                </div>
+                                
+                                <!-- Image Preview -->
+                                <div id="image-preview-container" style="display: none;">
+                                    <label class="form-label">New Image Preview:</label>
+                                    <div class="text-center">
+                                        <img id="image-preview" class="img-thumbnail" style="max-width: 300px; max-height: 300px;" alt="Image preview">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title"><i class="bi bi-clock-history"></i> Product History</h6>
+                                <div class="row text-center">
+                                    <div class="col">
+                                        <strong>Product ID</strong><br>
+                                        <span class="text-muted">#{{ product.id }}</span>
+                                    </div>
+                                    <div class="col">
+                                        <strong>Created</strong><br>
+                                        <span class="text-muted">{{ product.created_at[:10] }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('admin_products') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Update Product
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// File upload preview functionality
+document.getElementById('image_file').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    const previewContainer = document.getElementById('image-preview-container');
+    const preview = document.getElementById('image-preview');
+    
+    if (file) {
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            alert('Please select a valid image file.');
+            this.value = '';
+            previewContainer.style.display = 'none';
+            return;
+        }
+        
+        // Validate file size (5MB limit)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('File size must be less than 5MB.');
+            this.value = '';
+            previewContainer.style.display = 'none';
+            return;
+        }
+        
+        // Show preview
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            previewContainer.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+        
+    } else {
+        previewContainer.style.display = 'none';
+    }
+});
+
+// Unit checkbox functionality
+document.getElementById('unit').addEventListener('change', function() {
+    const unitText = document.getElementById('unit-text');
+    
+    if (this.checked) {
+        unitText.innerHTML = 'Currently set to: <strong>Per Kilogram</strong> (for small fish, vegetables, bulk items)';
+    } else {
+        unitText.innerHTML = 'Currently set to: <strong>Per Piece</strong> (for big fish, individual items)';
+    }
+});
+</script>
+{% endblock %}

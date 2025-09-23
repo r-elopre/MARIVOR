@@ -68,6 +68,11 @@
                                 <li><a class="dropdown-item py-2 px-3 fs-6" href="{{ url_for('profile') }}">
                                     <i class="bi bi-person fs-5 me-2"></i> Profile
                                 </a></li>
+                                {% if session.is_admin %}
+                                <li><a class="dropdown-item py-2 px-3 fs-6" href="{{ url_for('admin_dashboard') }}">
+                                    <i class="bi bi-gear-fill fs-5 me-2"></i> Admin Panel
+                                </a></li>
+                                {% endif %}
                                 <li><hr class="dropdown-divider my-2"></li>
                                 <li><a class="dropdown-item py-2 px-3 fs-6" href="{{ url_for('logout') }}">
                                     <i class="bi bi-box-arrow-right fs-5 me-2"></i> Logout
