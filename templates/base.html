@@ -16,68 +16,68 @@
 </head>
 <body>
     <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top py-3">
         <div class="container">
             <!-- Brand -->
-            <a class="navbar-brand fw-bold fs-3" href="{{ url_for('home') }}">
+            <a class="navbar-brand fw-bold" href="{{ url_for('home') }}" style="font-size: 2.5rem;">
                 🐟 Marivor 🥬
             </a>
             
             <!-- Mobile toggle button -->
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler border-0 p-2" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" style="font-size: 1.5rem;">
                 <span class="navbar-toggler-icon"></span>
             </button>
             
             <!-- Navigation items -->
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'home' %}active{% endif %}" href="{{ url_for('home') }}">
-                            <i class="bi bi-house-fill"></i> Home
+                    <li class="nav-item mx-2">
+                        <a class="nav-link fs-5 px-3 py-2 {% if request.endpoint == 'home' %}active{% endif %}" href="{{ url_for('home') }}">
+                            <i class="bi bi-house-fill fs-4 me-2"></i> Home
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'fish_products' %}active{% endif %}" href="{{ url_for('fish_products') }}">
-                            🐟 Fish
+                    <li class="nav-item mx-2">
+                        <a class="nav-link fs-5 px-3 py-2 {% if request.endpoint == 'fish_products' %}active{% endif %}" href="{{ url_for('fish_products') }}">
+                            <span class="fs-4 me-2">🐟</span> Fish
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'vegetable_products' %}active{% endif %}" href="{{ url_for('vegetable_products') }}">
-                            🥬 Vegetables
+                    <li class="nav-item mx-2">
+                        <a class="nav-link fs-5 px-3 py-2 {% if request.endpoint == 'vegetable_products' %}active{% endif %}" href="{{ url_for('vegetable_products') }}">
+                            <span class="fs-4 me-2">🥬</span> Vegetables
                         </a>
                     </li>
                 </ul>
                 
                 <!-- Right side navigation -->
                 <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'cart' %}active{% endif %}" href="{{ url_for('cart') }}">
-                            <i class="bi bi-cart-fill"></i> Cart
+                    <li class="nav-item mx-2">
+                        <a class="nav-link fs-5 px-3 py-2 {% if request.endpoint == 'cart' %}active{% endif %}" href="{{ url_for('cart') }}">
+                            <i class="bi bi-cart-fill fs-4 me-2"></i> Cart
                             {% if cart_count > 0 %}
-                                <span class="badge bg-danger rounded-pill ms-1">{{ cart_count }}</span>
+                                <span class="badge bg-danger rounded-pill ms-2 fs-6">{{ cart_count }}</span>
                             {% endif %}
                         </a>
                     </li>
                     
                     {% if is_logged_in %}
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                <i class="bi bi-person-circle"></i> {{ user_phone }}
+                        <li class="nav-item dropdown mx-2">
+                            <a class="nav-link dropdown-toggle fs-5 px-3 py-2" href="#" role="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-person-circle fs-4 me-2"></i> {{ user_phone }}
                             </a>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="{{ url_for('profile') }}">
-                                    <i class="bi bi-person"></i> Profile
+                            <ul class="dropdown-menu dropdown-menu-end p-2">
+                                <li><a class="dropdown-item py-2 px-3 fs-6" href="{{ url_for('profile') }}">
+                                    <i class="bi bi-person fs-5 me-2"></i> Profile
                                 </a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{{ url_for('logout') }}">
-                                    <i class="bi bi-box-arrow-right"></i> Logout
+                                <li><hr class="dropdown-divider my-2"></li>
+                                <li><a class="dropdown-item py-2 px-3 fs-6" href="{{ url_for('logout') }}">
+                                    <i class="bi bi-box-arrow-right fs-5 me-2"></i> Logout
                                 </a></li>
                             </ul>
                         </li>
                     {% else %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('login') }}">
-                                <i class="bi bi-phone"></i> Login
+                        <li class="nav-item mx-2">
+                            <a class="nav-link fs-5 px-3 py-2" href="{{ url_for('login') }}">
+                                <i class="bi bi-key-fill fs-4 me-2"></i> Login
                             </a>
                         </li>
                     {% endif %}

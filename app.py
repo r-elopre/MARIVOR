@@ -4,7 +4,7 @@ from datetime import datetime
 from flask import Flask, render_template, request, session, redirect, url_for, flash, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
-from auth_utils import auth_service
+from supabase_utils import get_supabase_client
 
 # Load environment variables
 load_dotenv()
@@ -77,143 +77,6 @@ def inject_user():
 # Routes
 
 # Authentication Routes
-@app.route('/send_otp', methods=['POST'])
-def send_otp():
-    """Send OTP to user's phone number"""
-    try:
-        phone_number = request.form.get('phone_number', '').strip()
-        is_resend = request.form.get('resend') == 'true'
-        
-        if not phone_number:
-            flash('Phone number is required.', 'error')
-            return redirect(url_for('login'))
-        
-        # Validate phone number format (10 digits)
-        if not phone_number.isdigit() or len(phone_number) != 10:
-            flash('Please enter a valid 10-digit Philippine phone number.', 'error')
-            return redirect(url_for('login'))
-        
-        # Generate OTP
-        otp_code = auth_service.generate_otp()
-        
-        # Store OTP in database
-        store_result = auth_service.store_otp(phone_number, otp_code)
-        if not store_result['success']:
-            flash(f'Error storing OTP: {store_result["error"]}', 'error')
-            return redirect(url_for('login'))
-        
-        # Send SMS
-        sms_result = auth_service.send_sms_otp(phone_number, otp_code)
-        if not sms_result['success']:
-            flash(f'Error sending SMS: {sms_result["error"]}', 'error')
-            return redirect(url_for('login'))
-        
-        # Store phone number in session for verification
-        session['verification_phone'] = store_result['formatted_phone']
-        session['verification_step'] = 'otp_sent'
-        
-        if is_resend:
-            # Return JSON response for AJAX request
-            return jsonify({'success': True, 'message': 'OTP sent successfully'})
-        else:
-            flash('Verification code sent to your phone!', 'success')
-            return redirect(url_for('verify_otp_page'))
-            
-    except Exception as e:
-        error_msg = f'Error sending OTP: {str(e)}'
-        if is_resend:
-            return jsonify({'success': False, 'error': error_msg})
-        else:
-            flash(error_msg, 'error')
-            return redirect(url_for('login'))
-
-@app.route('/verify_otp_page')
-def verify_otp_page():
-    """Show OTP verification page"""
-    if 'verification_phone' not in session:
-        flash('Please enter your phone number first.', 'warning')
-        return redirect(url_for('login'))
-    
-    # Extract last 4 digits for display
-    phone = session['verification_phone']
-    display_phone = phone[-4:] if len(phone) > 4 else phone
-    
-    return render_template('verify_otp.html', 
-                         phone_number=session['verification_phone'],
-                         display_phone=display_phone)
-
-@app.route('/verify_otp', methods=['POST'])
-def verify_otp():
-    """Verify OTP code and log user in"""
-    try:
-        phone_number = request.form.get('phone_number', '').strip()
-        otp_code = request.form.get('otp_code', '').strip()
-        
-        # Validate inputs
-        if not phone_number or not otp_code:
-            flash('Phone number and OTP code are required.', 'error')
-            return redirect(url_for('verify_otp_page'))
-        
-        # Validate OTP format
-        if not otp_code.isdigit() or len(otp_code) != 6:
-            flash('Please enter a valid 6-digit verification code.', 'error')
-            return redirect(url_for('verify_otp_page'))
-        
-        # Verify OTP
-        verify_result = auth_service.verify_otp(phone_number, otp_code)
-        
-        if not verify_result['success']:
-            error_msg = verify_result['error']
-            
-            # Handle specific error cases
-            if 'attempts' in verify_result:
-                attempts_left = verify_result['attempts_left']
-                if attempts_left > 0:
-                    flash(f'Invalid code. {attempts_left} attempts remaining.', 'error')
-                    return render_template('verify_otp.html', 
-                                         phone_number=phone_number,
-                                         attempts_left=attempts_left)
-                else:
-                    flash('Maximum attempts exceeded. Please request a new code.', 'error')
-                    session.pop('verification_phone', None)
-                    session.pop('verification_step', None)
-                    return redirect(url_for('login'))
-            else:
-                flash(error_msg, 'error')
-                return redirect(url_for('verify_otp_page'))
-        
-        # OTP verified successfully - get or create user
-        user_result = auth_service.get_or_create_user(phone_number)
-        
-        if not user_result['success']:
-            flash(f'Error creating user account: {user_result["error"]}', 'error')
-            return redirect(url_for('login'))
-        
-        # Log user in
-        user = user_result['user']
-        session['user_id'] = user['id']
-        session['phone_number'] = user['phone_number']
-        session['is_verified'] = True
-        session['is_admin'] = user.get('is_admin', False)
-        
-        # Clean up verification session data
-        session.pop('verification_phone', None)
-        session.pop('verification_step', None)
-        
-        # Show success message
-        if user_result['is_new']:
-            flash(f'Welcome to Marivor! Your account has been created.', 'success')
-        else:
-            flash(f'Welcome back! You\'re now logged in.', 'success')
-        
-        # Redirect to intended page or home
-        next_page = session.pop('next_page', None)
-        return redirect(next_page or url_for('home'))
-        
-    except Exception as e:
-        flash(f'Error verifying OTP: {str(e)}', 'error')
-        return redirect(url_for('verify_otp_page'))
-
 @app.route('/')
 def home():
     """Home page with featured products"""
@@ -259,27 +122,39 @@ def cart():
 
 @app.route('/profile')
 def profile():
-    """User profile page"""
+    """User profile page using Supabase"""
     if not is_logged_in():
         session['next_page'] = url_for('profile')
         flash('Please log in to view your profile.', 'warning')
         return redirect(url_for('login'))
     
-    # Fetch user information from database
-    conn = get_db_connection()
-    user_info = conn.execute(
-        'SELECT * FROM users WHERE id = ?', 
-        (session['user_id'],)
-    ).fetchone()
-    conn.close()
+    # Fetch user information from Supabase database
+    try:
+        supabase_client = get_supabase_client()
+        user_info = supabase_client.get_user_by_id(session['user_id'])
+        
+        if not user_info:
+            flash('User not found. Please log in again.', 'error')
+            return redirect(url_for('logout'))
+        
+        # Convert string date to datetime object for template compatibility
+        if user_info.get('created_at') and isinstance(user_info['created_at'], str):
+            from datetime import datetime
+            try:
+                # Parse ISO format date string (e.g., "2023-09-23T12:34:56.789Z")
+                user_info['created_at'] = datetime.fromisoformat(user_info['created_at'].replace('Z', '+00:00'))
+            except (ValueError, TypeError):
+                # If parsing fails, keep as string and handle in template
+                pass
+        
+        return render_template('profile.html', 
+                             user_info=user_info,
+                             page_title="My Profile - Marivor")
     
-    if not user_info:
-        flash('User not found. Please log in again.', 'error')
-        return redirect(url_for('logout'))
-    
-    return render_template('profile.html', 
-                         user_info=user_info,
-                         page_title="My Profile - Marivor")
+    except Exception as e:
+        print(f"Profile fetch error: {e}")
+        flash('Error loading profile. Please try again.', 'error')
+        return redirect(url_for('home'))
 
 @app.route('/login')
 def login():
@@ -292,7 +167,7 @@ def login():
 
 @app.route('/face_login', methods=['POST'])
 def face_login():
-    """Handle face code login"""
+    """Handle face code login using Supabase"""
     try:
         face_code = request.form.get('face_code', '').strip()
         
@@ -305,13 +180,9 @@ def face_login():
             flash('Please enter a valid 6-digit face code.', 'error')
             return redirect(url_for('login'))
         
-        # Check if user exists with this face code
-        conn = get_db_connection()
-        user = conn.execute(
-            'SELECT * FROM users WHERE face_login_code = ? AND is_verified = 1',
-            (face_code,)
-        ).fetchone()
-        conn.close()
+        # Get Supabase client and check if user exists with this face code
+        supabase_client = get_supabase_client()
+        user = supabase_client.get_user_by_face_code(face_code)
         
         if not user:
             flash('Invalid face code. Please check your code and try again.', 'error')
@@ -324,13 +195,14 @@ def face_login():
         session['is_verified'] = True
         session['login_method'] = 'face_code'
         
-        flash(f'Welcome back, {user["username"] or user["phone_number"]}!', 'success')
+        flash(f'Welcome back, {user.get("username") or user["phone_number"]}!', 'success')
         
         # Redirect to next page or home
         next_page = session.pop('next_page', None)
         return redirect(next_page if next_page else url_for('profile'))
         
     except Exception as e:
+        print(f"Face login error: {e}")
         flash('Login failed. Please try again.', 'error')
         return redirect(url_for('login'))
 
@@ -352,7 +224,7 @@ def face_register():
 
 @app.route('/register_face', methods=['POST'])
 def register_face():
-    """Handle face registration with photos"""
+    """Handle face registration with photos using Supabase"""
     try:
         data = request.json
         photos = data.get('photos', [])
@@ -367,51 +239,55 @@ def register_face():
         face_code = f"{random.randint(100000, 999999)}"  # 6-digit code
         username = f"face_{user_id}"
         
-        # Store photos (in production, save to file system or cloud storage)
-        import base64
+        # Get Supabase client
+        supabase_client = get_supabase_client()
         
-        # Create user photos directory
-        user_dir = f"static/face_photos/{user_id}"
-        os.makedirs(user_dir, exist_ok=True)
-        
-        photo_paths = []
+        # Debug: Print received photos data
+        print(f"Received {len(photos)} photos")
         for i, photo in enumerate(photos):
-            # Remove data URL prefix
-            photo_data = photo['data'].split(',')[1]
-            photo_bytes = base64.b64decode(photo_data)
+            print(f"Photo {i+1}: direction={photo.get('direction', 'unknown')}, data_type={type(photo.get('data'))}")
+            if isinstance(photo.get('data'), str):
+                print(f"Photo {i+1}: data_length={len(photo.get('data', ''))}")
+            else:
+                print(f"Photo {i+1}: data_value={photo.get('data')}")
+        
+        # Upload photos to Supabase Storage
+        photo_urls = {}
+        for photo in photos:
+            direction = photo['direction']  # 'front', 'left', 'right'
+            photo_data = photo['data']
             
-            # Save photo
-            photo_path = f"{user_dir}/{photo['direction']}.jpg"
-            with open(photo_path, 'wb') as f:
-                f.write(photo_bytes)
-            photo_paths.append(photo_path)
+            # Upload to Supabase Storage
+            photo_url = supabase_client.upload_face_photo(user_id, photo_data, direction)
+            if not photo_url:
+                return jsonify({'success': False, 'error': f'Failed to upload {direction} photo'})
+            
+            photo_urls[direction] = photo_url
         
-        # Create user account in database
-        conn = get_db_connection()
-        cursor = conn.cursor()
+        # Create user account in Supabase database
+        user_result = supabase_client.create_user(
+            username=username,
+            phone_number=username,  # Using username as phone for face users
+            face_login_code=face_code,
+            auth_type='face'
+        )
         
-        # Check if users table has the required columns
-        cursor.execute("PRAGMA table_info(users)")
-        columns = [column[1] for column in cursor.fetchall()]
+        if not user_result['success']:
+            return jsonify({'success': False, 'error': 'Failed to create user account'})
         
-        if 'face_photos_path' not in columns:
-            cursor.execute('ALTER TABLE users ADD COLUMN face_photos_path TEXT')
-        if 'face_login_code' not in columns:
-            cursor.execute('ALTER TABLE users ADD COLUMN face_login_code VARCHAR(6)')
-        if 'username' not in columns:
-            cursor.execute('ALTER TABLE users ADD COLUMN username VARCHAR(50)')
+        user_data = user_result['data']
+        user_id_db = user_data['id']
         
-        conn.commit()
+        # Update user with photo URLs
+        update_success = supabase_client.update_user_photos(
+            user_id_db,
+            photo_urls.get('front', ''),
+            photo_urls.get('left', ''),
+            photo_urls.get('right', '')
+        )
         
-        # Insert new user
-        cursor.execute('''
-            INSERT INTO users (phone_number, username, face_login_code, face_photos_path, created_at, is_verified) 
-            VALUES (?, ?, ?, ?, datetime('now'), 1)
-        ''', (username, username, face_code, ','.join(photo_paths)))
-        
-        user_id_db = cursor.lastrowid
-        conn.commit()
-        conn.close()
+        if not update_success:
+            return jsonify({'success': False, 'error': 'Failed to save photo references'})
         
         # Set session (log user in)
         session['user_id'] = user_id_db
@@ -429,7 +305,8 @@ def register_face():
         })
         
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+        print(f"Face registration error: {e}")
+        return jsonify({'success': False, 'error': f'Registration failed: {str(e)}'})
 
 # Error handlers
 @app.errorhandler(404)
