@@ -116,19 +116,51 @@ class SupabaseClient:
     
     # Product Management Methods
     def get_all_products(self) -> List[Dict[str, Any]]:
-        """Get all products"""
+        """Get all products with seller information"""
         try:
-            response = self.client.table('products').select('*').execute()
-            return response.data if response.data else []
+            # First get all products
+            products_response = self.client.table('products').select('*').execute()
+            products = products_response.data if products_response.data else []
+            
+            # Get all sellers info at once for efficiency
+            sellers_response = self.client.table('sellers').select('id, store_name').execute()
+            sellers_dict = {seller['id']: seller['store_name'] for seller in (sellers_response.data or [])}
+            
+            # Add seller info to each product
+            for product in products:
+                if product.get('seller_id') and product['seller_id'] is not None:
+                    # Seller-created product - lookup store name
+                    product['seller_store_name'] = sellers_dict.get(product['seller_id'], 'Unknown Seller')
+                else:
+                    # Admin-created product (seller_id is NULL)
+                    product['seller_store_name'] = 'Marivor Official'
+                    
+            return products
         except Exception as e:
             print(f"Error getting products: {e}")
             return []
     
     def get_products_by_category(self, category: str) -> List[Dict[str, Any]]:
-        """Get products by category"""
+        """Get products by category with seller information"""
         try:
-            response = self.client.table('products').select('*').eq('category', category).execute()
-            return response.data if response.data else []
+            # First get products by category
+            products_response = self.client.table('products').select('*').eq('category', category).execute()
+            products = products_response.data if products_response.data else []
+            
+            # Get all sellers info at once for efficiency
+            sellers_response = self.client.table('sellers').select('id, store_name').execute()
+            sellers_dict = {seller['id']: seller['store_name'] for seller in (sellers_response.data or [])}
+            
+            # Add seller info to each product
+            for product in products:
+                if product.get('seller_id') and product['seller_id'] is not None:
+                    # Seller-created product - lookup store name
+                    product['seller_store_name'] = sellers_dict.get(product['seller_id'], 'Unknown Seller')
+                else:
+                    # Admin-created product (seller_id is NULL)
+                    product['seller_store_name'] = 'Marivor Official'
+                    
+            return products
         except Exception as e:
             print(f"Error getting products by category: {e}")
             return []

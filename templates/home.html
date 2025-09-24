@@ -94,6 +94,18 @@
                                     </span>
                                 </div>
                                 
+                                <!-- Seller Information -->
+                                {% if product.seller_store_name %}
+                                    <p class="text-muted small mb-2">
+                                        <i class="bi bi-shop"></i> 
+                                        {% if product.seller_store_name == 'Marivor Official' %}
+                                            {{ product.seller_store_name }} <i class="bi bi-check-circle-fill text-success"></i>
+                                        {% else %}
+                                            {{ product.seller_store_name }}
+                                        {% endif %}
+                                    </p>
+                                {% endif %}
+                                
                                 {% if product.description %}
                                     <p class="card-text text-muted small">{{ product.description[:80] }}{% if product.description|length > 80 %}...{% endif %}</p>
                                 {% endif %}
