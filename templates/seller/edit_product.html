@@ -1,0 +1,335 @@
+{% extends "seller/base.html" %}
+
+{% block title %}Edit Product - Seller Panel{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-pencil me-2"></i>
+        Edit Product
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-box-seam"></i> Product Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    <!-- Basic Information -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Product Name *</label>
+                                <input type="text" class="form-control" id="name" name="name" 
+                                       value="{{ product.name }}" required>
+                                <div class="form-text">Enter a clear, descriptive product name</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="category" class="form-label">Category *</label>
+                                <select class="form-select" id="category" name="category" required>
+                                    <option value="">Select Category</option>
+                                    <option value="Fish" {{ 'selected' if product.category == 'Fish' }}>Fish</option>
+                                    <option value="Vegetables" {{ 'selected' if product.category == 'Vegetables' }}>Vegetables</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="4" 
+                                  placeholder="Describe your product features, specifications, and benefits...">{{ product.description or '' }}</textarea>
+                        <div class="form-text">Provide detailed information to help customers make informed decisions</div>
+                    </div>
+
+                    <!-- Pricing & Stock -->
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="price" class="form-label">Price (₱) *</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">₱</span>
+                                    <input type="number" class="form-control" id="price" name="price" 
+                                           step="0.01" min="0" value="{{ product.price }}" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="stock" class="form-label">Stock Quantity *</label>
+                                <input type="number" class="form-control" id="stock" name="stock" 
+                                       min="0" value="{{ product.stock }}" required>
+                                <div class="form-text">Number of items available for sale</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Selling Unit</label>
+                                <div class="d-flex align-items-center">
+                                    <span class="me-2 text-muted" id="unitLabel">Sold by Piece</span>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="unitToggle" name="unit" 
+                                               {{ 'checked' if product.unit else '' }}
+                                               onchange="toggleUnit()" style="width: 3em; height: 1.5em;">
+                                        <label class="form-check-label ms-2" for="unitToggle" id="toggleLabel">
+                                            <i class="bi bi-speedometer2" id="toggleIcon"></i>
+                                            <span id="toggleText">Enable for Kilogram</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="form-text" id="unitHelp">Toggle to sell by kilogram instead of per piece</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Current Images -->
+                    {% if product.images %}
+                    <div class="mb-3">
+                        <label class="form-label">Current Images</label>
+                        <div class="row">
+                            {% for image in product.images %}
+                            <div class="col-md-3 col-sm-4 mb-3">
+                                <div class="card">
+                                    <img src="{{ image }}" class="card-img-top" style="height: 120px; object-fit: cover;" alt="Product Image">
+                                    <div class="card-body p-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="delete_images" value="{{ loop.index0 }}" id="delete_{{ loop.index0 }}">
+                                            <label class="form-check-label small text-danger" for="delete_{{ loop.index0 }}">
+                                                Delete this image
+                                            </label>
+                                        </div>
+                                        {% if loop.index0 == 0 %}
+                                            <span class="badge bg-primary">Main Image</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Add New Images -->
+                    <div class="mb-4">
+                        <label for="images" class="form-label">Add New Images</label>
+                        <input type="file" class="form-control" id="images" name="images" 
+                               multiple accept="image/*" onchange="previewImages(this)">
+                        <div class="form-text">Upload additional images (JPG, PNG, max 2MB each)</div>
+                        
+                        <!-- New Image Preview -->
+                        <div id="imagePreview" class="row mt-3" style="display: none;"></div>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('seller_products') }}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Products
+                        </a>
+                        <div>
+                            <button type="button" class="btn btn-outline-danger me-2" onclick="confirmDelete()">
+                                <i class="bi bi-trash"></i> Delete Product
+                            </button>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-circle"></i> Update Product
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Product Stats Sidebar -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-graph-up"></i> Product Stats
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6 mb-3">
+                        <div class="text-muted small">Product ID</div>
+                        <div class="h6">#{{ product.id }}</div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="text-muted small">Created</div>
+                        <div class="h6">{{ product.created_at.strftime('%m/%d/%Y') if product.created_at else 'Recently' }}</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-muted small">Status</div>
+                        <div>
+                            {% if product.stock > 0 %}
+                                <span class="badge bg-success">In Stock</span>
+                            {% else %}
+                                <span class="badge bg-warning">Out of Stock</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-muted small">Images</div>
+                        <div class="h6">{{ product.images|length if product.images else 0 }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-lightbulb"></i> Update Tips
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6><i class="bi bi-camera text-primary"></i> Image Management</h6>
+                    <small class="text-muted">You can delete existing images or add new ones. The first image will always be the main display image.</small>
+                </div>
+                
+                <div class="mb-3">
+                    <h6><i class="bi bi-box text-warning"></i> Stock Updates</h6>
+                    <small class="text-muted">Keep your stock levels current to avoid overselling. Set to 0 to mark as out of stock.</small>
+                </div>
+                
+                <div class="mb-0">
+                    <h6><i class="bi bi-tags text-success"></i> Price Changes</h6>
+                    <small class="text-muted">Price updates take effect immediately. Consider the impact on existing customer interest.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteProductModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle text-warning"></i> Delete Product
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete "<strong>{{ product.name }}</strong>"?</p>
+                <p class="text-danger"><strong>This action cannot be undone and will remove all product data including images and order history.</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('seller_delete_product', product_id=product.id) }}" method="POST" class="d-inline">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> Delete Product
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function toggleUnit() {
+    const toggle = document.getElementById('unitToggle');
+    const unitLabel = document.getElementById('unitLabel');
+    const toggleText = document.getElementById('toggleText');
+    const toggleIcon = document.getElementById('toggleIcon');
+    const unitHelp = document.getElementById('unitHelp');
+    const priceLabel = document.querySelector('label[for="price"]');
+    
+    if (toggle.checked) {
+        // Kilogram mode
+        unitLabel.textContent = 'Sold by Kilogram';
+        unitLabel.className = 'me-2 text-success fw-bold';
+        toggleText.textContent = 'Kilogram Mode';
+        toggleIcon.className = 'bi bi-speedometer2 text-success';
+        unitHelp.textContent = 'Product will be sold by kilogram weight';
+        priceLabel.innerHTML = 'Price per Kilogram (₱) *';
+    } else {
+        // Piece mode
+        unitLabel.textContent = 'Sold by Piece';
+        unitLabel.className = 'me-2 text-muted';
+        toggleText.textContent = 'Enable for Kilogram';
+        toggleIcon.className = 'bi bi-speedometer2';
+        unitHelp.textContent = 'Toggle to sell by kilogram instead of per piece';
+        priceLabel.innerHTML = 'Price (₱) *';
+    }
+}
+
+function previewImages(input) {
+    const preview = document.getElementById('imagePreview');
+    preview.innerHTML = '';
+    
+    if (input.files && input.files.length > 0) {
+        preview.style.display = 'block';
+        
+        for (let i = 0; i < Math.min(input.files.length, 5); i++) {
+            const file = input.files[i];
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const col = document.createElement('div');
+                col.className = 'col-md-4 col-sm-6 mb-3';
+                
+                col.innerHTML = `
+                    <div class="card border-success">
+                        <img src="${e.target.result}" class="card-img-top" style="height: 120px; object-fit: cover;" alt="New Image">
+                        <div class="card-body p-2">
+                            <small class="text-success">New: ${file.name}</small>
+                        </div>
+                    </div>
+                `;
+                
+                preview.appendChild(col);
+            };
+            
+            reader.readAsDataURL(file);
+        }
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+function confirmDelete() {
+    new bootstrap.Modal(document.getElementById('deleteProductModal')).show();
+}
+
+// Form validation
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize the unit toggle state
+    toggleUnit();
+    
+    const form = document.querySelector('form');
+    
+    form.addEventListener('submit', function(e) {
+        const price = parseFloat(document.getElementById('price').value);
+        const stock = parseInt(document.getElementById('stock').value);
+        
+        if (price <= 0) {
+            e.preventDefault();
+            alert('Price must be greater than 0');
+            return;
+        }
+        
+        if (stock < 0) {
+            e.preventDefault();
+            alert('Stock quantity cannot be negative');
+            return;
+        }
+        
+        // Show loading state
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Updating Product...';
+        submitBtn.disabled = true;
+    });
+});
+</script>
+{% endblock %}

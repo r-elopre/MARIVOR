@@ -1,0 +1,221 @@
+{% extends "seller/base.html" %}
+
+{% block title %}Add Product - Seller Panel{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-plus-circle me-2"></i>
+        Add New Product
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-box-seam"></i> Product Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    <!-- Basic Information -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Product Name *</label>
+                                <input type="text" class="form-control" id="name" name="name" required>
+                                <div class="form-text">Enter a clear, descriptive product name</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="category" class="form-label">Category *</label>
+                                <select class="form-select" id="category" name="category" required>
+                                    <option value="">Select Category</option>
+                                    <option value="Fish">Fish</option>
+                                    <option value="Vegetables">Vegetables</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="4" 
+                                  placeholder="Describe your product features, specifications, and benefits..."></textarea>
+                        <div class="form-text">Provide detailed information to help customers make informed decisions</div>
+                    </div>
+
+                    <!-- Pricing & Stock -->
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="price" class="form-label">Price (₱) *</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">₱</span>
+                                    <input type="number" class="form-control" id="price" name="price" 
+                                           step="0.01" min="0" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="stock" class="form-label">Stock Quantity *</label>
+                                <input type="number" class="form-control" id="stock" name="stock" 
+                                       min="0" required>
+                                <div class="form-text">Number of items available for sale</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Selling Unit</label>
+                                <div class="d-flex align-items-center">
+                                    <span class="me-2 text-muted" id="unitLabel">Sold by Piece</span>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="unitToggle" name="unit" 
+                                               onchange="toggleUnit()" style="width: 3em; height: 1.5em;">
+                                        <label class="form-check-label ms-2" for="unitToggle" id="toggleLabel">
+                                            <i class="bi bi-speedometer2" id="toggleIcon"></i>
+                                            <span id="toggleText">Enable for Kilogram</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="form-text" id="unitHelp">Toggle to sell by kilogram instead of per piece</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Product Images -->
+                    <div class="mb-4">
+                        <label for="images" class="form-label">Product Images</label>
+                        <input type="file" class="form-control" id="images" name="images" 
+                               multiple accept="image/*" onchange="previewImages(this)">
+                        <div class="form-text">Upload up to 5 high-quality images (JPG, PNG, max 2MB each)</div>
+                        
+                        <!-- Image Preview -->
+                        <div id="imagePreview" class="row mt-3" style="display: none;"></div>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('seller_products') }}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Products
+                        </a>
+                        <div>
+                            <button type="button" class="btn btn-outline-secondary me-2" onclick="resetForm()">
+                                <i class="bi bi-arrow-clockwise"></i> Reset
+                            </button>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-circle"></i> Add Product
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function toggleUnit() {
+    const toggle = document.getElementById('unitToggle');
+    const unitLabel = document.getElementById('unitLabel');
+    const toggleText = document.getElementById('toggleText');
+    const toggleIcon = document.getElementById('toggleIcon');
+    const unitHelp = document.getElementById('unitHelp');
+    const priceLabel = document.querySelector('label[for="price"]');
+    
+    if (toggle.checked) {
+        // Kilogram mode
+        unitLabel.textContent = 'Sold by Kilogram';
+        unitLabel.className = 'me-2 text-success fw-bold';
+        toggleText.textContent = 'Kilogram Mode';
+        toggleIcon.className = 'bi bi-speedometer2 text-success';
+        unitHelp.textContent = 'Product will be sold by kilogram weight';
+        priceLabel.innerHTML = 'Price per Kilogram (₱) *';
+    } else {
+        // Piece mode
+        unitLabel.textContent = 'Sold by Piece';
+        unitLabel.className = 'me-2 text-muted';
+        toggleText.textContent = 'Enable for Kilogram';
+        toggleIcon.className = 'bi bi-speedometer2';
+        unitHelp.textContent = 'Toggle to sell by kilogram instead of per piece';
+        priceLabel.innerHTML = 'Price (₱) *';
+    }
+}
+
+function previewImages(input) {
+    const preview = document.getElementById('imagePreview');
+    preview.innerHTML = '';
+    
+    if (input.files && input.files.length > 0) {
+        preview.style.display = 'block';
+        
+        for (let i = 0; i < Math.min(input.files.length, 5); i++) {
+            const file = input.files[i];
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const col = document.createElement('div');
+                col.className = 'col-md-4 col-sm-6 mb-3';
+                
+                col.innerHTML = `
+                    <div class="card">
+                        <img src="${e.target.result}" class="card-img-top" style="height: 150px; object-fit: cover;" alt="Preview">
+                        <div class="card-body p-2">
+                            <small class="text-muted">${file.name}</small>
+                            ${i === 0 ? '<div><span class="badge bg-primary">Main Image</span></div>' : ''}
+                        </div>
+                    </div>
+                `;
+                
+                preview.appendChild(col);
+            };
+            
+            reader.readAsDataURL(file);
+        }
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+function resetForm() {
+    if (confirm('Are you sure you want to reset the form? All entered data will be lost.')) {
+        document.querySelector('form').reset();
+        document.getElementById('imagePreview').style.display = 'none';
+        document.getElementById('imagePreview').innerHTML = '';
+    }
+}
+
+// Form validation
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    
+    form.addEventListener('submit', function(e) {
+        const price = parseFloat(document.getElementById('price').value);
+        const stock = parseInt(document.getElementById('stock').value);
+        
+        if (price <= 0) {
+            e.preventDefault();
+            alert('Price must be greater than 0');
+            return;
+        }
+        
+        if (stock < 0) {
+            e.preventDefault();
+            alert('Stock quantity cannot be negative');
+            return;
+        }
+        
+        // Show loading state
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Adding Product...';
+        submitBtn.disabled = true;
+    });
+});
+</script>
+{% endblock %}

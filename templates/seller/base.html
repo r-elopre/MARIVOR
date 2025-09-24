@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Admin Panel - Marivor{% endblock %}</title>
+    <title>{% block title %}Seller Dashboard - Marivor{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <style>
-        .admin-sidebar {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        .seller-sidebar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px 0;
         }
         
-        .admin-sidebar .nav-link {
+        .seller-sidebar .nav-link {
             color: rgba(255, 255, 255, 0.8);
             padding: 12px 20px;
             margin: 5px 10px;
@@ -22,23 +22,23 @@
             transition: all 0.3s ease;
         }
         
-        .admin-sidebar .nav-link:hover {
+        .seller-sidebar .nav-link:hover {
             background: rgba(255, 255, 255, 0.1);
             color: white;
         }
         
-        .admin-sidebar .nav-link.active {
+        .seller-sidebar .nav-link.active {
             background: rgba(255, 255, 255, 0.2);
             color: white;
         }
         
-        .admin-header {
+        .seller-header {
             background: white;
             border-bottom: 1px solid #dee2e6;
             padding: 15px 0;
         }
         
-        .admin-content {
+        .seller-content {
             padding: 30px;
             background: #f8f9fa;
             min-height: calc(100vh - 80px);
@@ -59,31 +59,30 @@
         .stat-number {
             font-size: 2.5rem;
             font-weight: bold;
-            color: #1e3c72;
+            color: #667eea;
         }
         
-        .admin-table {
+        .seller-table {
             background: white;
             border-radius: 10px;
             overflow: hidden;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         
-        .status-badge {
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 500;
+        .store-info {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
         }
         
-        .status-processed {
-            background: #fff3cd;
-            color: #856404;
-        }
-        
-        .status-on_delivery {
-            background: #d1ecf1;
-            color: #0c5460;
+        .store-logo {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid rgba(255, 255, 255, 0.3);
         }
     </style>
 </head>
@@ -91,30 +90,31 @@
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2 admin-sidebar">
+            <div class="col-md-3 col-lg-2 seller-sidebar">
                 <div class="text-center text-white mb-4">
-                    <h4><i class="bi bi-gear-fill"></i> Admin Panel</h4>
-                    <p class="mb-0">Welcome, {{ session.admin_username }}</p>
+                    <h4><i class="bi bi-shop"></i> Seller Panel</h4>
+                    <p class="mb-0">{{ session.store_name or 'My Store' }}</p>
+                    <small class="text-white-50">ID: {{ session.user_id or 'SELLER' }}</small>
                 </div>
                 
                 <nav class="nav flex-column">
-                    <a class="nav-link {% if request.endpoint == 'admin_dashboard' %}active{% endif %}" href="{{ url_for('admin_dashboard') }}">
+                    <a class="nav-link {% if request.endpoint == 'seller_dashboard' %}active{% endif %}" href="{{ url_for('seller_dashboard') }}">
                         <i class="bi bi-speedometer2"></i> Dashboard
                     </a>
-                    <a class="nav-link {% if request.endpoint == 'admin_orders' %}active{% endif %}" href="{{ url_for('admin_orders') }}">
+                    <a class="nav-link {% if request.endpoint in ['seller_products', 'seller_add_product', 'seller_edit_product'] %}active{% endif %}" href="{{ url_for('seller_products') }}">
+                        <i class="bi bi-grid-3x3-gap"></i> My Products
+                    </a>
+                    <a class="nav-link {% if request.endpoint == 'seller_orders' %}active{% endif %}" href="{{ url_for('seller_orders') }}">
                         <i class="bi bi-box-seam"></i> Orders
                     </a>
-                    <a class="nav-link {% if request.endpoint in ['admin_products', 'admin_add_product', 'admin_edit_product'] %}active{% endif %}" href="{{ url_for('admin_products') }}">
-                        <i class="bi bi-grid-3x3-gap"></i> Products
-                    </a>
-                    <a class="nav-link {% if request.endpoint in ['admin_sellers', 'admin_add_seller', 'admin_edit_seller'] %}active{% endif %}" href="{{ url_for('admin_sellers') }}">
-                        <i class="bi bi-shop"></i> Sellers
+                    <a class="nav-link {% if request.endpoint == 'seller_settings' %}active{% endif %}" href="{{ url_for('seller_settings') }}">
+                        <i class="bi bi-gear"></i> Store Settings
                     </a>
                     <hr class="text-white">
                     <a class="nav-link" href="{{ url_for('home') }}">
-                        <i class="bi bi-house"></i> Back to Store
+                        <i class="bi bi-house"></i> View Store
                     </a>
-                    <a class="nav-link" href="{{ url_for('admin_logout') }}">
+                    <a class="nav-link" href="{{ url_for('seller_logout') }}">
                         <i class="bi bi-box-arrow-right"></i> Logout
                     </a>
                 </nav>
@@ -123,13 +123,13 @@
             <!-- Main Content -->
             <div class="col-md-9 col-lg-10 p-0">
                 <!-- Header -->
-                <div class="admin-header">
+                <div class="seller-header">
                     <div class="container-fluid">
                         <div class="d-flex justify-content-between align-items-center">
-                            <h2 class="mb-0">{% block page_title %}Admin Dashboard{% endblock %}</h2>
+                            <h2 class="mb-0">{% block page_title %}Seller Dashboard{% endblock %}</h2>
                             <div class="d-flex align-items-center">
-                                <span class="badge bg-primary me-3">Admin Mode</span>
-                                <a href="{{ url_for('admin_logout') }}" class="btn btn-outline-secondary btn-sm">
+                                <span class="badge bg-purple me-3">Seller Mode</span>
+                                <a href="{{ url_for('seller_logout') }}" class="btn btn-outline-secondary btn-sm">
                                     <i class="bi bi-box-arrow-right"></i> Logout
                                 </a>
                             </div>
@@ -138,7 +138,7 @@
                 </div>
                 
                 <!-- Content -->
-                <div class="admin-content">
+                <div class="seller-content">
                     <!-- Flash Messages -->
                     {% with messages = get_flashed_messages(with_categories=true) %}
                         {% if messages %}

@@ -1,0 +1,288 @@
+{% extends "seller/base.html" %}
+
+{% block title %}Store Settings - Seller Panel{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-gear me-2"></i>
+        Store Settings
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Store Information -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-shop"></i> Store Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="row">
+                        <div class="col-md-4 text-center mb-3">
+                            <div class="mb-3">
+                                {% if seller_info.store_image_url %}
+                                    <img src="{{ seller_info.store_image_url }}" alt="Store Logo" 
+                                         class="rounded-circle" style="width: 120px; height: 120px; object-fit: cover;" id="storeLogoPreview">
+                                {% else %}
+                                    <div class="bg-light rounded-circle d-flex align-items-center justify-content-center text-muted mx-auto" 
+                                         style="width: 120px; height: 120px;" id="storeLogoPreview">
+                                        <i class="bi bi-shop fs-1"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="mb-3">
+                                <label for="store_image" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-camera"></i> Change Logo
+                                </label>
+                                <input type="file" class="d-none" id="store_image" name="store_image" 
+                                       accept="image/*" onchange="previewLogo(this)">
+                            </div>
+                            <div class="form-text small">Recommended: 400x400px, max 2MB</div>
+                        </div>
+                        
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="store_name" class="form-label">Store Name *</label>
+                                <input type="text" class="form-control" id="store_name" name="store_name" 
+                                       value="{{ seller_info.store_name }}" required>
+                                <div class="form-text">This is how your store will appear to customers</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Store Description</label>
+                                <textarea class="form-control" id="description" name="description" rows="4" 
+                                          placeholder="Tell customers about your store, what you sell, and what makes you special...">{{ seller_info.description or '' }}</textarea>
+                                <div class="form-text">A compelling description helps customers trust your store</div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="contact_email" class="form-label">Contact Email</label>
+                                        <input type="email" class="form-control" id="contact_email" name="contact_email" 
+                                               value="{{ seller_info.contact_email or '' }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="contact_phone" class="form-label">Contact Phone</label>
+                                        <input type="tel" class="form-control" id="contact_phone" name="contact_phone" 
+                                               value="{{ seller_info.contact_phone or '' }}">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="d-flex justify-content-end">
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-circle"></i> Update Store Information
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Business Settings -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-briefcase"></i> Business Settings
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('seller_settings') }}?section=business">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="business_hours" class="form-label">Business Hours</label>
+                                <input type="text" class="form-control" id="business_hours" name="business_hours" 
+                                       value="{{ seller_info.business_hours or 'Mon-Fri 9AM-6PM' }}" 
+                                       placeholder="e.g., Mon-Fri 9AM-6PM">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="shipping_policy" class="form-label">Shipping Policy</label>
+                                <select class="form-select" id="shipping_policy" name="shipping_policy">
+                                    <option value="standard" {{ 'selected' if seller_info.shipping_policy == 'standard' }}>Standard Shipping (3-5 days)</option>
+                                    <option value="express" {{ 'selected' if seller_info.shipping_policy == 'express' }}>Express Shipping (1-2 days)</option>
+                                    <option value="pickup" {{ 'selected' if seller_info.shipping_policy == 'pickup' }}>Pickup Only</option>
+                                    <option value="custom" {{ 'selected' if seller_info.shipping_policy == 'custom' }}>Custom Policy</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="return_policy" class="form-label">Return Policy</label>
+                        <textarea class="form-control" id="return_policy" name="return_policy" rows="3" 
+                                  placeholder="Describe your return and refund policy...">{{ seller_info.return_policy or '' }}</textarea>
+                    </div>
+                    
+                    <div class="d-flex justify-content-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Update Business Settings
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Account Information -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-person-circle"></i> Account Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label text-muted">Seller Code</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" value="{{ seller_info.seller_code }}" readonly>
+                        <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('{{ seller_info.seller_code }}')">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                    </div>
+                    <div class="form-text">Use this code to log in to your seller account</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted">Account Status</label>
+                    <div>
+                        {% if seller_info.is_active %}
+                            <span class="badge bg-success fs-6">
+                                <i class="bi bi-check-circle"></i> Active
+                            </span>
+                        {% else %}
+                            <span class="badge bg-warning fs-6">
+                                <i class="bi bi-pause-circle"></i> Inactive
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted">Member Since</label>
+                    <div class="fw-bold">{{ seller_info.created_at.strftime('%B %d, %Y') if seller_info.created_at else 'Recently' }}</div>
+                </div>
+                
+                <div class="mb-0">
+                    <label class="form-label text-muted">Last Updated</label>
+                    <div class="fw-bold">{{ seller_info.updated_at.strftime('%B %d, %Y') if seller_info.updated_at else 'Never' }}</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Store Statistics -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-graph-up"></i> Store Statistics
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6 mb-3">
+                        <div class="h4 text-primary">{{ stats.total_products or 0 }}</div>
+                        <div class="text-muted small">Products</div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="h4 text-success">{{ stats.total_orders or 0 }}</div>
+                        <div class="text-muted small">Orders</div>
+                    </div>
+                    <div class="col-12">
+                        <div class="h4 text-info">₱{{ "%.2f"|format(stats.total_revenue or 0) }}</div>
+                        <div class="text-muted small">Total Revenue</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-lightning-charge"></i> Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('seller_products') }}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-grid-3x3-gap"></i> Manage Products
+                    </a>
+                    <a href="{{ url_for('seller_add_product') }}" class="btn btn-outline-success btn-sm">
+                        <i class="bi bi-plus-circle"></i> Add Product
+                    </a>
+                    <a href="{{ url_for('seller_orders') }}" class="btn btn-outline-info btn-sm">
+                        <i class="bi bi-box-seam"></i> View Orders
+                    </a>
+                    <a href="{{ url_for('seller_dashboard') }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function previewLogo(input) {
+    const preview = document.getElementById('storeLogoPreview');
+    
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            preview.innerHTML = `<img src="${e.target.result}" alt="Store Logo" class="rounded-circle" style="width: 120px; height: 120px; object-fit: cover;">`;
+        };
+        
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(function() {
+        // Show temporary success message
+        const button = event.target.closest('button');
+        const originalContent = button.innerHTML;
+        button.innerHTML = '<i class="bi bi-check"></i>';
+        button.classList.replace('btn-outline-secondary', 'btn-success');
+        
+        setTimeout(function() {
+            button.innerHTML = originalContent;
+            button.classList.replace('btn-success', 'btn-outline-secondary');
+        }, 2000);
+    }).catch(function() {
+        alert('Failed to copy to clipboard');
+    });
+}
+
+// Form submission handling
+document.addEventListener('DOMContentLoaded', function() {
+    const forms = document.querySelectorAll('form');
+    
+    forms.forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Updating...';
+                submitBtn.disabled = true;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

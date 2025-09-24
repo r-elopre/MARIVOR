@@ -46,6 +46,13 @@
                             <span class="fs-4 me-2">🥬</span> Vegetables
                         </a>
                     </li>
+                    {% if is_seller %}
+                    <li class="nav-item mx-2">
+                        <a class="nav-link fs-5 px-3 py-2 {% if request.endpoint in ['seller_products', 'seller_add_product'] %}active{% endif %}" href="{{ url_for('seller_products') }}">
+                            <i class="bi bi-shop fs-4 me-2"></i> My Products
+                        </a>
+                    </li>
+                    {% endif %}
                 </ul>
                 
                 <!-- Right side navigation -->
@@ -62,13 +69,24 @@
                     {% if is_logged_in %}
                         <li class="nav-item dropdown mx-2">
                             <a class="nav-link dropdown-toggle fs-5 px-3 py-2" href="#" role="button" data-bs-toggle="dropdown">
-                                <i class="bi bi-person-circle fs-4 me-2"></i> {{ user_phone }}
+                                <i class="bi bi-person-circle fs-4 me-2"></i> 
+                                {% if is_seller %}{{ store_name }}{% else %}{{ user_phone }}{% endif %}
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end p-2">
-                                <li><a class="dropdown-item py-2 px-3 fs-6" href="{{ url_for('profile') }}">
-                                    <i class="bi bi-person fs-5 me-2"></i> Profile
-                                </a></li>
-                                {% if session.is_admin %}
+                                {% if is_seller %}
+                                    <li><a class="dropdown-item py-2 px-3 fs-6" href="{{ url_for('seller_dashboard') }}">
+                                        <i class="bi bi-speedometer2 fs-5 me-2"></i> Dashboard
+                                    </a></li>
+                                    <li><a class="dropdown-item py-2 px-3 fs-6" href="{{ url_for('seller_store_settings') }}">
+                                        <i class="bi bi-shop fs-5 me-2"></i> Store Settings
+                                    </a></li>
+                                {% else %}
+                                    <li><a class="dropdown-item py-2 px-3 fs-6" href="{{ url_for('profile') }}">
+                                        <i class="bi bi-person fs-5 me-2"></i> Profile
+                                    </a></li>
+                                {% endif %}
+                                {% if is_admin %}
+                                <li><hr class="dropdown-divider my-2"></li>
                                 <li><a class="dropdown-item py-2 px-3 fs-6" href="{{ url_for('admin_dashboard') }}">
                                     <i class="bi bi-gear-fill fs-5 me-2"></i> Admin Panel
                                 </a></li>

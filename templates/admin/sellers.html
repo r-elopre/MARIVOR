@@ -1,0 +1,126 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Seller Management</h2>
+        <a href="{{ url_for('admin_add_seller') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i> Add New Seller
+        </a>
+    </div>
+
+    {% if sellers %}
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Store</th>
+                                <th>Seller Code</th>
+                                <th>Products</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for seller in sellers %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% if seller.store_image_url %}
+                                            <img src="{{ seller.store_image_url }}" alt="{{ seller.store_name }}" 
+                                                 class="rounded-circle me-3" style="width: 40px; height: 40px; object-fit: cover;">
+                                        {% else %}
+                                            <div class="bg-light rounded-circle me-3 d-flex align-items-center justify-content-center" 
+                                                 style="width: 40px; height: 40px;">
+                                                <i class="bi bi-shop text-muted"></i>
+                                            </div>
+                                        {% endif %}
+                                        <div>
+                                            <div class="fw-bold">{{ seller.store_name }}</div>
+                                            <small class="text-muted">ID: {{ seller.id }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <code class="bg-light px-2 py-1 rounded">{{ seller.seller_code }}</code>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">{{ seller.product_count }} products</span>
+                                </td>
+                                <td>
+                                    {% if seller.is_active %}
+                                        <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small class="text-muted">
+                                        {{ seller.created_at[:10] if seller.created_at else 'N/A' }}
+                                    </small>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('admin_edit_seller', seller_id=seller.id) }}" 
+                                           class="btn btn-outline-primary" title="Edit Seller">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-outline-warning" 
+                                                onclick="toggleSeller({{ seller.id }}, {{ seller.is_active|lower }})"
+                                                title="{% if seller.is_active %}Deactivate{% else %}Activate{% endif %} Seller">
+                                            {% if seller.is_active %}
+                                                <i class="bi bi-pause-circle"></i>
+                                            {% else %}
+                                                <i class="bi bi-play-circle"></i>
+                                            {% endif %}
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="text-center py-5">
+            <div class="fs-1 text-muted mb-3">🏪</div>
+            <h4 class="text-muted">No sellers found</h4>
+            <p class="text-muted mb-4">Start by adding your first seller to the marketplace.</p>
+            <a href="{{ url_for('admin_add_seller') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-2"></i> Add First Seller
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+function toggleSeller(sellerId, isActive) {
+    const action = isActive ? 'deactivate' : 'activate';
+    if (confirm(`Are you sure you want to ${action} this seller?`)) {
+        fetch(`/admin/sellers/toggle/${sellerId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred. Please try again.');
+        });
+    }
+}
+</script>
+{% endblock %}

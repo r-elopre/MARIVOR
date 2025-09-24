@@ -1,0 +1,214 @@
+{% extends "seller/base.html" %}
+
+{% block title %}Dashboard - Seller Panel{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-speedometer2 me-2"></i>
+        Dashboard Overview
+    </div>
+{% endblock %}
+
+{% block content %}
+<!-- Store Info Card -->
+<div class="store-info">
+    <div class="row align-items-center">
+        <div class="col-auto">
+            {% if seller and seller.store_image_url %}
+                <img src="{{ seller.store_image_url }}" alt="Store Logo" class="store-logo">
+            {% else %}
+                <div class="store-logo d-flex align-items-center justify-content-center bg-white text-primary">
+                    <i class="bi bi-shop fs-3"></i>
+                </div>
+            {% endif %}
+        </div>
+        <div class="col">
+            <h3 class="mb-1">{{ seller.store_name if seller else session.store_name or 'My Store' }}</h3>
+            <p class="mb-2">{{ seller.description if seller else 'Welcome to your seller dashboard!' }}</p>
+            <div class="row">
+                <div class="col-md-4">
+                    <small class="text-white-50">Seller Code:</small>
+                    <div class="fw-bold">{{ seller.seller_code if seller else session.user_id or 'UNKNOWN' }}</div>
+                </div>
+                <div class="col-md-4">
+                    <small class="text-white-50">Status:</small>
+                    <div>
+                        {% if seller and seller.is_active %}
+                            <span class="badge bg-success">Active</span>
+                        {% else %}
+                            <span class="badge bg-success">Active</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <small class="text-white-50">Joined:</small>
+                    <div class="fw-bold">{{ seller.created_at if seller and seller.created_at else 'Recently' }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stat-card text-center">
+            <div class="stat-number">{{ stats.total_products or 0 }}</div>
+            <h6 class="text-muted">Total Products</h6>
+            <a href="{{ url_for('seller_products') }}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-grid-3x3-gap"></i> Manage
+            </a>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card text-center">
+            <div class="stat-number">{{ (stats.total_products or 0) - (stats.out_of_stock or 0) }}</div>
+            <h6 class="text-muted">Active Products</h6>
+            <a href="{{ url_for('seller_add_product') }}" class="btn btn-sm btn-outline-success">
+                <i class="bi bi-plus-circle"></i> Add New
+            </a>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card text-center">
+            <div class="stat-number">{{ stats.total_orders or 0 }}</div>
+            <h6 class="text-muted">Total Orders</h6>
+            <a href="{{ url_for('seller_orders') }}" class="btn btn-sm btn-outline-info">
+                <i class="bi bi-box-seam"></i> View All
+            </a>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card text-center">
+            <div class="stat-number">₱{{ "%.2f"|format(stats.total_revenue or 0) }}</div>
+            <h6 class="text-muted">Total Revenue</h6>
+            <small class="text-success">
+                <i class="bi bi-arrow-up"></i> This month
+            </small>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activities -->
+<div class="row">
+    <!-- Recent Orders -->
+    <div class="col-lg-8">
+        <div class="seller-table">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th colspan="4" class="border-bottom-0">
+                                <div class="d-flex justify-content-between align-items-center py-2">
+                                    <h5 class="mb-0">
+                                        <i class="bi bi-clock-history"></i> Recent Products
+                                    </h5>
+                                    <a href="{{ url_for('seller_products') }}" class="btn btn-sm btn-outline-primary">
+                                        View All Products
+                                    </a>
+                                </div>
+                            </th>
+                        </tr>
+                        <tr>
+                            <th>Product #</th>
+                            <th>Product</th>
+                            <th>Price</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if products and products|length > 0 %}
+                            {% for product in products %}
+                            <tr>
+                                <td>
+                                    <strong>#{{ loop.index }}</strong>
+                                    <br><small class="text-muted">Recent</small>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% if product.images and product.images|length > 0 %}
+                                            <img src="{{ product.images[0] }}" alt="Product" class="rounded me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                                        {% endif %}
+                                        <div>
+                                            <div class="fw-bold">{{ product.name }}</div>
+                                            <small class="text-muted">Stock: {{ product.stock }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="fw-bold">₱{{ "%.2f"|format(product.price) }}</td>
+                                <td>
+                                    {% if product.stock > 0 %}
+                                        <span class="badge bg-success">In Stock</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">Out of Stock</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-muted">
+                                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                    No products yet. Add your first product to get started!
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-lightning-charge"></i> Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('seller_add_product') }}" class="btn btn-success">
+                        <i class="bi bi-plus-circle"></i> Add New Product
+                    </a>
+                    <a href="{{ url_for('seller_products') }}" class="btn btn-outline-primary">
+                        <i class="bi bi-grid-3x3-gap"></i> Manage Products
+                    </a>
+                    <a href="{{ url_for('seller_orders') }}" class="btn btn-outline-info">
+                        <i class="bi bi-box-seam"></i> View Orders
+                    </a>
+                    <a href="{{ url_for('seller_settings') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-gear"></i> Store Settings
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Store Performance -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-graph-up"></i> Performance
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-12 mb-3">
+                        <div class="text-muted small">This Month</div>
+                        <div class="h4 text-success">₱{{ "%.2f"|format(stats.monthly_revenue or 0) }}</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-muted small">Orders</div>
+                        <div class="h5">{{ stats.monthly_orders or 0 }}</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-muted small">Products</div>
+                        <div class="h5">{{ stats.total_products or 0 }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

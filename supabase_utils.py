@@ -33,7 +33,7 @@ class SupabaseClient:
     
     # User Management Methods
     def create_user(self, username: str, phone_number: str, face_login_code: str, 
-                   auth_type: str = 'face') -> Dict[str, Any]:
+                   auth_type: str = 'face', user_type: str = 'customer', seller_id: int = None) -> Dict[str, Any]:
         """Create a new user in the database"""
         try:
             user_data = {
@@ -41,6 +41,8 @@ class SupabaseClient:
                 'phone_number': phone_number,
                 'face_login_code': face_login_code,
                 'auth_type': auth_type,
+                'user_type': user_type,
+                'seller_id': seller_id,
                 'is_verified': True,
                 'created_at': datetime.utcnow().isoformat()
             }
@@ -131,15 +133,20 @@ class SupabaseClient:
             print(f"Error getting products by category: {e}")
             return []
     
-    def add_product(self, name: str, category: str, price: float, stock: int, image_url: str = "") -> Dict[str, Any]:
+    def add_product(self, name: str, category: str, price: float, stock: int, image_url: str = "", 
+                   seller_id: int = None, created_by: str = "admin", description: str = "", unit: bool = True) -> Dict[str, Any]:
         """Add a new product"""
         try:
             product_data = {
                 'name': name,
                 'category': category,
+                'description': description,
                 'price': price,
                 'stock': stock,
+                'unit': unit,
                 'image_url': image_url,
+                'seller_id': seller_id,
+                'created_by': created_by,
                 'created_at': datetime.utcnow().isoformat()
             }
             
@@ -206,7 +213,7 @@ class SupabaseClient:
     
     def add_product_with_image(self, name: str, category: str, price: float, stock: int, unit: bool,
                               image_file_data: bytes = None, image_filename: str = None, 
-                              image_url: str = "") -> Dict[str, Any]:
+                              image_url: str = "", seller_id: int = None, created_by: str = "admin") -> Dict[str, Any]:
         """Add a new product with optional image upload"""
         try:
             final_image_url = image_url
@@ -239,6 +246,8 @@ class SupabaseClient:
                 'stock': stock,
                 'unit': unit,
                 'image_url': final_image_url,
+                'seller_id': seller_id,
+                'created_by': created_by,
                 'created_at': datetime.utcnow().isoformat()
             }
             
@@ -406,6 +415,114 @@ class SupabaseClient:
             print(f"Error getting user orders: {e}")
             return []
     
+    # Seller Management Methods
+    def create_seller_account(self, store_name: str, seller_code: str) -> Dict[str, Any]:
+        """Create a new seller account"""
+        try:
+            seller_data = {
+                'seller_code': seller_code,
+                'store_name': store_name,
+                'is_active': True,
+                'created_at': datetime.utcnow().isoformat()
+            }
+            
+            response = self.client.table('sellers').insert(seller_data).execute()
+            return {'success': True, 'data': response.data[0] if response.data else None}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def get_all_sellers(self) -> List[Dict[str, Any]]:
+        """Get all sellers"""
+        try:
+            response = self.client.table('sellers').select('*').order('created_at', desc=True).execute()
+            return response.data if response.data else []
+        except Exception as e:
+            print(f"Error getting sellers: {e}")
+            return []
+    
+    def get_seller_by_code(self, seller_code: str) -> Optional[Dict[str, Any]]:
+        """Get seller by seller code"""
+        try:
+            response = self.client.table('sellers').select('*').eq('seller_code', seller_code).eq('is_active', True).execute()
+            return response.data[0] if response.data else None
+        except Exception as e:
+            print(f"Error getting seller by code: {e}")
+            return None
+    
+    def get_seller_by_id(self, seller_id: int) -> Optional[Dict[str, Any]]:
+        """Get seller by ID"""
+        try:
+            response = self.client.table('sellers').select('*').eq('id', seller_id).execute()
+            return response.data[0] if response.data else None
+        except Exception as e:
+            print(f"Error getting seller by ID: {e}")
+            return None
+    
+    def update_seller(self, seller_id: int, **kwargs) -> bool:
+        """Update seller details"""
+        try:
+            response = self.client.table('sellers').update(kwargs).eq('id', seller_id).execute()
+            return len(response.data) > 0
+        except Exception as e:
+            print(f"Error updating seller: {e}")
+            return False
+    
+    def deactivate_seller(self, seller_id: int) -> bool:
+        """Deactivate a seller account"""
+        try:
+            response = self.client.table('sellers').update({'is_active': False}).eq('id', seller_id).execute()
+            return len(response.data) > 0
+        except Exception as e:
+            print(f"Error deactivating seller: {e}")
+            return False
+    
+    def get_seller_products(self, seller_id: int) -> List[Dict[str, Any]]:
+        """Get products by seller"""
+        try:
+            response = self.client.table('products').select('*').eq('seller_id', seller_id).order('created_at', desc=True).execute()
+            return response.data if response.data else []
+        except Exception as e:
+            print(f"Error getting seller products: {e}")
+            return []
+    
+    def upload_store_image(self, seller_id: int, image_file_data: bytes, filename: str, content_type: str = 'image/jpeg') -> Dict[str, Any]:
+        """Upload store image to Supabase storage"""
+        try:
+            # Generate unique filename
+            file_extension = filename.split('.')[-1] if '.' in filename else 'jpg'
+            unique_filename = f"store_{seller_id}_{uuid.uuid4()}.{file_extension}"
+            
+            # Upload to Supabase storage
+            response = self.storage_client.storage.from_('store').upload(
+                unique_filename, 
+                image_file_data,
+                file_options={'content-type': content_type}
+            )
+            
+            if response.status_code in [200, 201]:
+                # Get public URL
+                public_url = self.storage_client.storage.from_('store').get_public_url(unique_filename)
+                return {
+                    'success': True, 
+                    'url': public_url,
+                    'filename': unique_filename
+                }
+            else:
+                return {'success': False, 'error': f'Upload failed with status {response.status_code}'}
+                
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def generate_seller_code(self) -> str:
+        """Generate a unique 6-digit seller code"""
+        import random
+        while True:
+            code = f"{random.randint(100000, 999999)}"
+            # Check if code already exists
+            existing = self.get_seller_by_code(code)
+            if not existing:
+                return code
+    
     # Storage Methods
     def upload_face_photo(self, user_id: str, photo_data: str, direction: str) -> Optional[str]:
         """
@@ -514,6 +631,61 @@ class SupabaseClient:
         except Exception as e:
             print(f"Error deleting user photos: {e}")
             return False
+    
+    def upload_store_image(self, seller_id: int, image_data: bytes, filename: str) -> str:
+        """Upload store image and return public URL"""
+        try:
+            # Generate unique filename
+            file_extension = filename.rsplit('.', 1)[1].lower() if '.' in filename else 'jpg'
+            unique_filename = f"store/{seller_id}_{uuid.uuid4()}.{file_extension}"
+            
+            # Upload to store bucket
+            storage_response = self.client.storage.from_('store').upload(unique_filename, image_data)
+            
+            # Check for successful upload (200 status means success)
+            if hasattr(storage_response, 'status_code') and storage_response.status_code == 200:
+                # Get public URL
+                public_url = self.client.storage.from_('store').get_public_url(unique_filename)
+                return public_url
+            elif hasattr(storage_response, 'data') and storage_response.data:
+                # Alternative success check
+                public_url = self.client.storage.from_('store').get_public_url(unique_filename)
+                return public_url
+            else:
+                raise Exception(f"Storage upload failed: {storage_response}")
+                
+        except Exception as e:
+            print(f"Error uploading store image: {e}")
+            raise e
+    
+    def upload_product_image(self, seller_id: int, image_data: bytes, filename: str) -> str:
+        """Upload product image and return public URL"""
+        try:
+            # Generate unique filename (without products/ prefix since we're uploading to products bucket)
+            file_extension = filename.rsplit('.', 1)[1].lower() if '.' in filename else 'jpg'
+            unique_filename = f"{seller_id}_{uuid.uuid4()}.{file_extension}"
+            
+            # Upload to products bucket
+            storage_response = self.client.storage.from_('products').upload(unique_filename, image_data)
+            
+            # Debug: Print the response to understand its structure
+            print(f"Storage response: {storage_response}")
+            print(f"Response type: {type(storage_response)}")
+            print(f"Response attributes: {dir(storage_response)}")
+            
+            # For now, assume upload was successful if we got any response
+            # and try to get the public URL
+            try:
+                public_url = self.client.storage.from_('products').get_public_url(unique_filename)
+                print(f"Generated public URL: {public_url}")
+                return public_url
+            except Exception as url_error:
+                print(f"Error getting public URL: {url_error}")
+                raise Exception(f"Upload succeeded but failed to get public URL: {url_error}")
+                
+        except Exception as e:
+            print(f"Error uploading product image: {e}")
+            raise e
 
 # Global Supabase client instance
 supabase_client = None

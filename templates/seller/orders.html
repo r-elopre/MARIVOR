@@ -1,0 +1,288 @@
+{% extends "seller/base.html" %}
+
+{% block title %}Orders - Seller Panel{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-box-seam me-2"></i>
+        Orders Management
+    </div>
+{% endblock %}
+
+{% block content %}
+<!-- Order Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stat-card text-center">
+            <div class="stat-number text-primary">{{ orders|length if orders else 0 }}</div>
+            <h6 class="text-muted">Total Orders</h6>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card text-center">
+            <div class="stat-number text-warning">{{ orders|selectattr('status', 'eq', 'pending')|list|length if orders else 0 }}</div>
+            <h6 class="text-muted">Pending</h6>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card text-center">
+            <div class="stat-number text-info">{{ orders|selectattr('status', 'eq', 'processing')|list|length if orders else 0 }}</div>
+            <h6 class="text-muted">Processing</h6>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card text-center">
+            <div class="stat-number text-success">{{ orders|selectattr('status', 'eq', 'completed')|list|length if orders else 0 }}</div>
+            <h6 class="text-muted">Completed</h6>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Tabs -->
+<div class="card mb-4">
+    <div class="card-header border-0">
+        <ul class="nav nav-tabs card-header-tabs" id="orderTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab">
+                    <i class="bi bi-list-ul"></i> All Orders
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" type="button" role="tab">
+                    <i class="bi bi-clock"></i> Pending
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="processing-tab" data-bs-toggle="tab" data-bs-target="#processing" type="button" role="tab">
+                    <i class="bi bi-gear"></i> Processing
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="completed-tab" data-bs-toggle="tab" data-bs-target="#completed" type="button" role="tab">
+                    <i class="bi bi-check-circle"></i> Completed
+                </button>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<!-- Orders Content -->
+<div class="tab-content" id="orderTabsContent">
+    <!-- All Orders Tab -->
+    <div class="tab-pane fade show active" id="all" role="tabpanel">
+        <div class="seller-table">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Customer</th>
+                            <th>Product</th>
+                            <th>Quantity</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if orders %}
+                            {% for order in orders %}
+                            <tr>
+                                <td>
+                                    <strong>#{{ order.id }}</strong>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-2">
+                                            <i class="bi bi-person-circle fs-4 text-muted"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold">{{ order.customer_name or 'Anonymous' }}</div>
+                                            <small class="text-muted">{{ order.customer_email or 'No email' }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% if order.product_image %}
+                                            <img src="{{ order.product_image }}" alt="Product" class="rounded me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                                        {% endif %}
+                                        <div>
+                                            <div class="fw-bold">{{ order.product_name }}</div>
+                                            <small class="text-muted">{{ order.product_category or 'No category' }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="fw-bold">{{ order.quantity }}</td>
+                                <td class="fw-bold">₱{{ "%.2f"|format(order.total_amount) }}</td>
+                                <td>
+                                    {% if order.status == 'pending' %}
+                                        <span class="badge bg-warning">Pending</span>
+                                    {% elif order.status == 'processing' %}
+                                        <span class="badge bg-info">Processing</span>
+                                    {% elif order.status == 'shipped' %}
+                                        <span class="badge bg-primary">Shipped</span>
+                                    {% elif order.status == 'completed' %}
+                                        <span class="badge bg-success">Completed</span>
+                                    {% elif order.status == 'cancelled' %}
+                                        <span class="badge bg-danger">Cancelled</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ order.status.title() }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div>{{ order.created_at.strftime('%m/%d/%Y') if order.created_at else 'Recent' }}</div>
+                                    <small class="text-muted">{{ order.created_at.strftime('%I:%M %p') if order.created_at else '' }}</small>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button type="button" class="btn btn-outline-primary view-order-btn" 
+                                                data-order-id="{{ order.id }}" title="View Details">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        {% if order.status == 'pending' %}
+                                            <button type="button" class="btn btn-outline-success update-status-btn" 
+                                                    data-order-id="{{ order.id }}" data-new-status="processing" title="Start Processing">
+                                                <i class="bi bi-play"></i>
+                                            </button>
+                                        {% elif order.status == 'processing' %}
+                                            <button type="button" class="btn btn-outline-info update-status-btn" 
+                                                    data-order-id="{{ order.id }}" data-new-status="shipped" title="Mark as Shipped">
+                                                <i class="bi bi-truck"></i>
+                                            </button>
+                                        {% elif order.status == 'shipped' %}
+                                            <button type="button" class="btn btn-outline-success update-status-btn" 
+                                                    data-order-id="{{ order.id }}" data-new-status="completed" title="Mark as Completed">
+                                                <i class="bi bi-check"></i>
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="8" class="text-center py-5">
+                                    <div class="text-muted">
+                                        <i class="bi bi-inbox fs-1 d-block mb-3"></i>
+                                        <h5>No orders yet</h5>
+                                        <p class="mb-3">Orders for your products will appear here once customers start purchasing.</p>
+                                        <a href="{{ url_for('seller_products') }}" class="btn btn-primary">
+                                            <i class="bi bi-grid-3x3-gap"></i> Manage Products
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Other tabs would have similar content filtered by status -->
+    <div class="tab-pane fade" id="pending" role="tabpanel">
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-clock fs-1 d-block mb-3"></i>
+            <h5>Pending Orders</h5>
+            <p>Orders waiting for your action will appear here.</p>
+        </div>
+    </div>
+    
+    <div class="tab-pane fade" id="processing" role="tabpanel">
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-gear fs-1 d-block mb-3"></i>
+            <h5>Processing Orders</h5>
+            <p>Orders currently being processed will appear here.</p>
+        </div>
+    </div>
+    
+    <div class="tab-pane fade" id="completed" role="tabpanel">
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-check-circle fs-1 d-block mb-3"></i>
+            <h5>Completed Orders</h5>
+            <p>Successfully completed orders will appear here.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Order Details Modal -->
+<div class="modal fade" id="orderModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-box-seam"></i> Order Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="orderDetails">
+                <!-- Order details will be loaded here -->
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle view order buttons
+    document.querySelectorAll('.view-order-btn').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const orderId = this.getAttribute('data-order-id');
+            viewOrder(orderId);
+        });
+    });
+    
+    // Handle update status buttons
+    document.querySelectorAll('.update-status-btn').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const orderId = this.getAttribute('data-order-id');
+            const newStatus = this.getAttribute('data-new-status');
+            updateOrderStatus(orderId, newStatus);
+        });
+    });
+});
+
+function viewOrder(orderId) {
+    const modal = new bootstrap.Modal(document.getElementById('orderModal'));
+    modal.show();
+    
+    // Here you would typically load order details via AJAX
+    document.getElementById('orderDetails').innerHTML = `
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> Order details for Order #${orderId} would be loaded here.
+            This feature requires additional backend implementation.
+        </div>
+    `;
+}
+
+function updateOrderStatus(orderId, newStatus) {
+    if (confirm(`Are you sure you want to update this order status to "${newStatus}"?`)) {
+        // Here you would typically send an AJAX request to update the order status
+        console.log(`Updating order ${orderId} to status: ${newStatus}`);
+        
+        // For now, just show an alert
+        alert(`Order status update feature requires backend implementation. Order #${orderId} would be updated to "${newStatus}".`);
+        
+        // In a real implementation, you would:
+        // 1. Send POST request to update order status
+        // 2. Refresh the page or update the UI dynamically
+        // 3. Show success/error messages
+    }
+}
+
+// Auto-refresh every 30 seconds to check for new orders
+setInterval(function() {
+    // In a real implementation, you might want to check for new orders
+    // and update the page accordingly
+}, 30000);
+</script>
+{% endblock %}
