@@ -632,32 +632,6 @@ class SupabaseClient:
             print(f"Error deleting user photos: {e}")
             return False
     
-    def upload_store_image(self, seller_id: int, image_data: bytes, filename: str) -> str:
-        """Upload store image and return public URL"""
-        try:
-            # Generate unique filename
-            file_extension = filename.rsplit('.', 1)[1].lower() if '.' in filename else 'jpg'
-            unique_filename = f"store/{seller_id}_{uuid.uuid4()}.{file_extension}"
-            
-            # Upload to store bucket
-            storage_response = self.client.storage.from_('store').upload(unique_filename, image_data)
-            
-            # Check for successful upload (200 status means success)
-            if hasattr(storage_response, 'status_code') and storage_response.status_code == 200:
-                # Get public URL
-                public_url = self.client.storage.from_('store').get_public_url(unique_filename)
-                return public_url
-            elif hasattr(storage_response, 'data') and storage_response.data:
-                # Alternative success check
-                public_url = self.client.storage.from_('store').get_public_url(unique_filename)
-                return public_url
-            else:
-                raise Exception(f"Storage upload failed: {storage_response}")
-                
-        except Exception as e:
-            print(f"Error uploading store image: {e}")
-            raise e
-    
     def upload_product_image(self, seller_id: int, image_data: bytes, filename: str) -> str:
         """Upload product image and return public URL"""
         try:

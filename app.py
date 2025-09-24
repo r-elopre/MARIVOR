@@ -38,7 +38,7 @@ def get_featured_products():
         
         # Get products by category
         fish_products = supabase_client.get_products_by_category('Fish')[:2]
-        vegetable_products = supabase_client.get_products_by_category('Vegetable')[:2]
+        vegetable_products = supabase_client.get_products_by_category('Vegetables')[:2]
         
         # Combine and return
         featured = fish_products + vegetable_products
@@ -88,10 +88,10 @@ def fish_products():
 @app.route('/vegetable')
 def vegetable_products():
     """Vegetable category page"""
-    vegetable_products = get_products_by_category('Vegetable')
+    vegetable_products = get_products_by_category('Vegetables')
     return render_template('category.html', 
                          products=vegetable_products,
-                         category='Vegetable',
+                         category='Vegetables',
                          page_title="Fresh Vegetables - Marivor",
                          category_icon="🥬")
 
@@ -361,7 +361,7 @@ def admin_dashboard():
         stats = {
             'total_products': len(all_products),
             'fish_products': len([p for p in all_products if p['category'] == 'Fish']),
-            'vegetable_products': len([p for p in all_products if p['category'] == 'Vegetable']),
+            'vegetable_products': len([p for p in all_products if p['category'] == 'Vegetables']),
             'processed_orders': len(processed_orders),
             'delivery_orders': len(delivery_orders)
         }
@@ -811,7 +811,7 @@ def seller_dashboard():
         stats = {
             'total_products': len(products),
             'fish_products': len([p for p in products if p.get('category') == 'Fish']),
-            'vegetable_products': len([p for p in products if p.get('category') == 'Vegetable']),
+            'vegetable_products': len([p for p in products if p.get('category') == 'Vegetables']),
             'out_of_stock': len([p for p in products if p.get('stock', 0) == 0]),
             'total_orders': 0,
             'total_revenue': 0.0,
