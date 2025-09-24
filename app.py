@@ -49,7 +49,12 @@ def get_featured_products():
 
 def is_logged_in():
     """Check if user is logged in"""
-    return 'user_id' in session and 'phone_number' in session
+    # Check for customer login
+    customer_logged_in = 'user_id' in session and 'phone_number' in session
+    # Check for seller login
+    seller_logged_in = 'seller_id' in session and 'user_type' in session and session.get('user_type') == 'seller'
+    
+    return customer_logged_in or seller_logged_in
 
 @app.context_processor
 def inject_user():
@@ -192,7 +197,7 @@ def face_login():
                 return redirect(url_for('seller_dashboard'))
             else:
                 next_page = session.pop('next_page', None)
-                return redirect(next_page if next_page else url_for('profile'))
+                return redirect(next_page if next_page else url_for('home'))
         
         # If not a customer code, check if it's a seller code
         seller = supabase_client.get_seller_by_code(face_code)
