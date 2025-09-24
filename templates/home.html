@@ -2,18 +2,21 @@
 
 {% block content %}
 <!-- Hero Section -->
-<section class="bg-primary text-white py-5">
+<section class="bg-primary text-white py-4 py-md-5">
     <div class="container">
         <div class="row align-items-center">
             <div class="col-lg-8">
-                <h1 class="display-4 fw-bold mb-4">Fresh Fish & Vegetables</h1>
-                <p class="lead mb-4">
+                <h1 class="h2 h1-md fw-bold mb-3 mb-md-4">Fresh Fish & Vegetables</h1>
+                <p class="mb-3 mb-md-4 d-none d-sm-block">
                     Welcome to Marivor! Get the freshest fish and vegetables delivered 
                     straight to your door. Quality guaranteed, locally sourced.
                 </p>
+                <p class="mb-3 d-block d-sm-none">
+                    Fresh fish and vegetables delivered to your door!
+                </p>
             </div>
-            <div class="col-lg-4 text-center">
-                <div class="fs-1" style="font-size: 6rem !important;">
+            <div class="col-lg-4 text-center d-none d-md-block">
+                <div class="fs-1" style="font-size: 4rem !important;">
                     🐟🥬🦐🥕
                 </div>
             </div>
@@ -164,6 +167,25 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<style>
+/* Mobile-first responsive hero text */
+.h1-md {
+    font-size: 1.75rem;
+}
+
+@media (min-width: 768px) {
+    .h1-md {
+        font-size: 3rem;
+    }
+}
+
+@media (min-width: 1200px) {
+    .h1-md {
+        font-size: 3.5rem;
+    }
+}
+</style>
+
 <script>
 function addToCart(productId) {
     // For now, just show an alert
