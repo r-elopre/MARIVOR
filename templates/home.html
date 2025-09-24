@@ -8,11 +8,10 @@
             <div class="col-lg-8">
                 <h1 class="h2 h1-md fw-bold mb-3 mb-md-4">Fresh Fish & Vegetables</h1>
                 <p class="mb-3 mb-md-4 d-none d-sm-block">
-                    Welcome to Marivor! Get the freshest fish and vegetables delivered 
-                    straight to your door. Quality guaranteed, locally sourced.
+                    Deliver in less than 24 hours.
                 </p>
                 <p class="mb-3 d-block d-sm-none">
-                    Fresh fish and vegetables delivered to your door!
+                    Deliver in less than 24 hours.
                 </p>
             </div>
             <div class="col-lg-4 text-center d-none d-md-block">
@@ -49,10 +48,6 @@
                             </button>
                         {% endif %}
                     </div>
-                    <small class="text-muted">
-                        <i class="bi bi-info-circle"></i> 
-                        Search for products by name (e.g., "tilapia") or find products from specific sellers (e.g., "Marivor Official")
-                    </small>
                 </div>
                 
                 <div class="row g-3">
@@ -103,7 +98,9 @@
             <div class="row g-4">
                 {% for product in products %}
                     <div class="col-lg-3 col-md-6">
-                        <div class="card h-100 shadow-sm">
+                        <div class="card h-100 shadow-sm store-card" role="button" 
+                             onclick="openStoreModal('{{ product.seller_store_name }}', {{ product.seller_id or 'null' }}, {{ product.id }})"
+                             style="cursor: pointer; transition: transform 0.2s ease;">
                             <!-- Product Image -->
                             <div class="card-img-top d-flex align-items-center justify-content-center bg-light" style="height: 200px;">
                                 {% if product.image_url %}
@@ -206,6 +203,29 @@
         </div>
     </div>
 </section>
+
+<!-- Store Profile Modal -->
+<div class="modal fade" id="storeModal" tabindex="-1" aria-labelledby="storeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="storeModalLabel">
+                    <i class="bi bi-shop"></i> Store Profile
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="storeModalBody">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading store information...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_scripts %}
@@ -226,9 +246,221 @@
         font-size: 3.5rem;
     }
 }
+
+/* Store card hover effects */
+.store-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.15) !important;
+}
+
+.store-card::after {
+    content: 'Click to view store info';
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(13, 110, 253, 0.9);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 2;
+}
+
+.store-card:hover::after {
+    opacity: 1;
+}
 </style>
 
 <script>
+// Store modal functions
+let currentProductId = null;
+
+function openStoreModal(storeName, sellerId, productId) {
+    currentProductId = productId;
+    
+    // Get product info from the clicked card
+    const productCard = event.currentTarget;
+    const productImg = productCard.querySelector('img');
+    const productName = productCard.querySelector('.card-title').textContent;
+    const productCategory = productCard.querySelector('.badge').textContent;
+    
+    // Store product info globally
+    window.currentProduct = {
+        id: productId,
+        name: productName,
+        category: productCategory,
+        imageUrl: productImg ? productImg.src : null
+    };
+    
+    // Show modal with loading state
+    const modal = new bootstrap.Modal(document.getElementById('storeModal'));
+    modal.show();
+    
+    // Load store data
+    loadStoreData(storeName, sellerId);
+}
+
+function loadStoreData(storeName, sellerId) {
+    const modalBody = document.getElementById('storeModalBody');
+    
+    // Show loading state
+    modalBody.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading store information...</p>
+        </div>
+    `;
+    
+    // Determine API endpoint
+    const apiUrl = storeName === 'Marivor Official' ? '/api/store/official' : `/api/store/${sellerId}`;
+    
+    // Fetch store data
+    fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            renderStoreModal(data);
+        })
+        .catch(error => {
+            modalBody.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="text-danger fs-1">⚠️</div>
+                    <h5 class="text-danger">Error Loading Store</h5>
+                    <p class="text-muted">${error.message}</p>
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            `;
+        });
+}
+
+function renderStoreModal(storeData) {
+    const { store_info, ratings, reviews, stats } = storeData;
+    const modalBody = document.getElementById('storeModalBody');
+    
+    const starsHtml = generateStars(ratings.average_rating);
+    
+    modalBody.innerHTML = `
+        <!-- Product Info -->
+        ${window.currentProduct ? `
+        <div class="bg-light rounded p-3 mb-4">
+            <div class="d-flex align-items-center">
+                <img src="${window.currentProduct.imageUrl}" alt="${window.currentProduct.name}" class="rounded me-3" style="width: 60px; height: 60px; object-fit: cover;">
+                <div>
+                    <h6 class="mb-0 fw-bold">${window.currentProduct.name}</h6>
+                    <span class="badge bg-secondary">${window.currentProduct.category}</span>
+                </div>
+            </div>
+        </div>
+        ` : ''}
+        
+        <!-- Store Header -->
+        <div class="text-center mb-4">
+            <div class="store-avatar mb-3">
+                ${store_info.store_image_url 
+                    ? `<img src="${store_info.store_image_url}" class="rounded-circle" width="80" height="80" style="object-fit: cover;">` 
+                    : `<div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;"><i class="bi bi-shop text-white fs-2"></i></div>`
+                }
+            </div>
+            <h4 class="fw-bold">${store_info.store_name} ${store_info.store_name === 'Marivor Official' ? '<i class="bi bi-check-circle-fill text-success"></i>' : ''}</h4>
+            <div class="rating-display mb-2">
+                ${starsHtml}
+                <span class="ms-2 text-muted">(${ratings.total_reviews} reviews)</span>
+            </div>
+            <small class="text-muted">Member since ${new Date(store_info.created_at).getFullYear()}</small>
+        </div>
+        
+        <!-- Store Stats -->
+        <div class="row text-center mb-4">
+            <div class="col-6">
+                <div class="stat-box p-3 bg-light rounded">
+                    <div class="fs-4 fw-bold text-primary">${stats.total_products}</div>
+                    <small class="text-muted">Products</small>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="stat-box p-3 bg-light rounded">
+                    <div class="fs-4 fw-bold text-info">${stats.satisfaction_rate}%</div>
+                    <small class="text-muted">Satisfaction</small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Reviews -->
+        <div class="reviews-section mb-4">
+            <h6 class="fw-bold mb-3"><i class="bi bi-chat-dots"></i> Recent Reviews</h6>
+            <div class="reviews-list" style="max-height: 300px; overflow-y: auto;">
+                ${reviews.map(review => `
+                    <div class="review-item border-bottom py-3">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-secondary rounded-circle d-inline-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                                    <i class="bi bi-person text-white"></i>
+                                </div>
+                                <strong class="small">${review.customer_name}</strong>
+                            </div>
+                            <div class="rating-small">
+                                ${generateStars(review.rating, true)}
+                            </div>
+                        </div>
+                        <p class="small text-muted mb-1">"${review.comment}"</p>
+                        <small class="text-muted">${new Date(review.created_at).toLocaleDateString()}</small>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="d-grid gap-2">
+            <button class="btn btn-primary" onclick="addCurrentProductToCart()">
+                <i class="bi bi-cart-plus"></i> Add Current Product to Cart
+            </button>
+            <button class="btn btn-outline-primary w-100">
+                <i class="bi bi-eye"></i> View All Products
+            </button>
+        </div>
+    `;
+}
+
+function generateStars(rating, small = false) {
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 !== 0;
+    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+    const sizeClass = small ? 'fs-6' : '';
+    
+    let starsHtml = '';
+    
+    // Full stars
+    for (let i = 0; i < fullStars; i++) {
+        starsHtml += `<i class="bi bi-star-fill text-warning ${sizeClass}"></i>`;
+    }
+    
+    // Half star
+    if (hasHalfStar) {
+        starsHtml += `<i class="bi bi-star-half text-warning ${sizeClass}"></i>`;
+    }
+    
+    // Empty stars
+    for (let i = 0; i < emptyStars; i++) {
+        starsHtml += `<i class="bi bi-star text-warning ${sizeClass}"></i>`;
+    }
+    
+    return starsHtml;
+}
+
+function addCurrentProductToCart() {
+    if (currentProductId) {
+        addToCart(currentProductId);
+        // Close modal after adding to cart
+        bootstrap.Modal.getInstance(document.getElementById('storeModal')).hide();
+    }
+}
+
 function addToCart(productId) {
     // For now, just show an alert
     // We'll implement proper cart functionality later

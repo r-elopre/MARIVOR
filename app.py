@@ -88,6 +88,26 @@ def home():
                              current_sort='newest',
                              page_title="Fresh Fish & Vegetables - Marivor")
 
+@app.route('/api/store/<int:seller_id>')
+def get_store_api(seller_id):
+    """API endpoint to get store details for modal"""
+    try:
+        supabase_client = get_supabase_client()
+        store_details = supabase_client.get_store_details(seller_id=seller_id)
+        return jsonify(store_details)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/store/official')
+def get_official_store_api():
+    """API endpoint to get Marivor Official store details"""
+    try:
+        supabase_client = get_supabase_client()
+        store_details = supabase_client.get_store_details(store_name="Marivor Official")
+        return jsonify(store_details)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/cart')
 def cart():
     """Shopping cart page"""
