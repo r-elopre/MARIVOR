@@ -13,39 +13,8 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 
 # All database operations now handled through Supabase
 
-def get_products_by_category(category=None, limit=None):
-    """Get products filtered by category from Supabase"""
-    try:
-        supabase_client = get_supabase_client()
-        if category:
-            products = supabase_client.get_products_by_category(category)
-        else:
-            products = supabase_client.get_all_products()
-        
-        # Apply limit if specified
-        if limit and products:
-            products = products[:limit]
-        
-        return products
-    except Exception as e:
-        print(f"Error getting products by category: {e}")
-        return []
+# Removed unused helper functions - products now handled directly in home route
 
-def get_featured_products():
-    """Get featured products for home page (mix of fish and vegetables) from Supabase"""
-    try:
-        supabase_client = get_supabase_client()
-        
-        # Get products by category
-        fish_products = supabase_client.get_products_by_category('Fish')[:2]
-        vegetable_products = supabase_client.get_products_by_category('Vegetables')[:2]
-        
-        # Combine and return
-        featured = fish_products + vegetable_products
-        return featured
-    except Exception as e:
-        print(f"Error getting featured products: {e}")
-        return []
 
 def is_logged_in():
     """Check if user is logged in"""
@@ -74,31 +43,42 @@ def inject_user():
 # Authentication Routes
 @app.route('/')
 def home():
-    """Home page with featured products"""
-    featured_products = get_featured_products()
-    return render_template('home.html', 
-                         products=featured_products,
-                         page_title="Fresh Fish & Vegetables - Marivor")
-
-@app.route('/fish')
-def fish_products():
-    """Fish category page"""
-    fish_products = get_products_by_category('Fish')
-    return render_template('category.html', 
-                         products=fish_products,
-                         category='Fish',
-                         page_title="Fresh Fish - Marivor",
-                         category_icon="🐟")
-
-@app.route('/vegetable')
-def vegetable_products():
-    """Vegetable category page"""
-    vegetable_products = get_products_by_category('Vegetables')
-    return render_template('category.html', 
-                         products=vegetable_products,
-                         category='Vegetables',
-                         page_title="Fresh Vegetables - Marivor",
-                         category_icon="🥬")
+    """Home page with all products and filtering/sorting"""
+    # Get query parameters
+    category = request.args.get('category', 'all')  # all, Fish, Vegetables
+    sort_by = request.args.get('sort', 'newest')     # newest, price_low, price_high
+    
+    try:
+        supabase_client = get_supabase_client()
+        
+        # Get all products
+        if category == 'all':
+            products = supabase_client.get_all_products()
+        else:
+            products = supabase_client.get_products_by_category(category)
+        
+        # Sort products
+        if sort_by == 'price_low':
+            products = sorted(products, key=lambda x: x.get('price', 0))
+        elif sort_by == 'price_high':
+            products = sorted(products, key=lambda x: x.get('price', 0), reverse=True)
+        elif sort_by == 'newest':
+            # Sort by created_at descending (newest first)
+            products = sorted(products, key=lambda x: x.get('created_at', ''), reverse=True)
+        
+        return render_template('home.html', 
+                             products=products,
+                             current_category=category,
+                             current_sort=sort_by,
+                             page_title="Fresh Fish & Vegetables - Marivor")
+    
+    except Exception as e:
+        print(f"Error loading products: {e}")
+        return render_template('home.html', 
+                             products=[],
+                             current_category='all',
+                             current_sort='newest',
+                             page_title="Fresh Fish & Vegetables - Marivor")
 
 @app.route('/cart')
 def cart():

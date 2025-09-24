@@ -5,23 +5,15 @@
 <section class="bg-primary text-white py-5">
     <div class="container">
         <div class="row align-items-center">
-            <div class="col-lg-6">
+            <div class="col-lg-8">
                 <h1 class="display-4 fw-bold mb-4">Fresh Fish & Vegetables</h1>
                 <p class="lead mb-4">
                     Welcome to Marivor! Get the freshest fish and vegetables delivered 
                     straight to your door. Quality guaranteed, locally sourced.
                 </p>
-                <div class="d-flex gap-3">
-                    <a href="{{ url_for('fish_products') }}" class="btn btn-light btn-lg">
-                        🐟 Browse Fish
-                    </a>
-                    <a href="{{ url_for('vegetable_products') }}" class="btn btn-outline-light btn-lg">
-                        🥬 Browse Vegetables
-                    </a>
-                </div>
             </div>
-            <div class="col-lg-6 text-center">
-                <div class="fs-1" style="font-size: 8rem !important;">
+            <div class="col-lg-4 text-center">
+                <div class="fs-1" style="font-size: 6rem !important;">
                     🐟🥬🦐🥕
                 </div>
             </div>
@@ -29,15 +21,52 @@
     </div>
 </section>
 
-<!-- Featured Products Section -->
+<!-- Products Section with Filtering -->
 <section class="py-5">
     <div class="container">
-        <div class="text-center mb-5">
-            <h2 class="display-5 fw-bold">Featured Products</h2>
-            <p class="lead text-muted">Handpicked fresh items for you</p>
+        <!-- Filter and Sort Controls -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <h2 class="display-5 fw-bold">All Products</h2>
+                <p class="text-muted">Choose from our fresh selection</p>
+            </div>
+            <div class="col-md-6">
+                <div class="row g-3">
+                    <!-- Category Filter -->
+                    <div class="col-sm-6">
+                        <label class="form-label fw-bold">Filter by Category:</label>
+                        <select class="form-select" id="categoryFilter" onchange="updateFilters()">
+                            <option value="all" {{ 'selected' if current_category == 'all' }}>All Products</option>
+                            <option value="Fish" {{ 'selected' if current_category == 'Fish' }}>🐟 Fish Only</option>
+                            <option value="Vegetables" {{ 'selected' if current_category == 'Vegetables' }}>🥬 Vegetables Only</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Sort Options -->
+                    <div class="col-sm-6">
+                        <label class="form-label fw-bold">Sort by:</label>
+                        <select class="form-select" id="sortFilter" onchange="updateFilters()">
+                            <option value="newest" {{ 'selected' if current_sort == 'newest' }}>Newest First</option>
+                            <option value="price_low" {{ 'selected' if current_sort == 'price_low' }}>Price: Low to High</option>
+                            <option value="price_high" {{ 'selected' if current_sort == 'price_high' }}>Price: High to Low</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
         </div>
         
+        <!-- Products Display -->
         {% if products %}
+            <!-- Product Stats -->
+            <div class="mb-4">
+                <span class="badge bg-secondary fs-6">
+                    {{ products|length }} products found
+                    {% if current_category != 'all' %} 
+                        in {{ current_category }}
+                    {% endif %}
+                </span>
+            </div>
+            
             <div class="row g-4">
                 {% for product in products %}
                     <div class="col-lg-3 col-md-6">
@@ -63,7 +92,7 @@
                                 </div>
                                 
                                 {% if product.description %}
-                                    <p class="card-text text-muted small">{{ product.description[:80] }}...</p>
+                                    <p class="card-text text-muted small">{{ product.description[:80] }}{% if product.description|length > 80 %}...{% endif %}</p>
                                 {% endif %}
                                 
                                 <div class="mt-auto">
@@ -95,27 +124,16 @@
                     </div>
                 {% endfor %}
             </div>
-            
-            <!-- View More Button -->
-            <div class="text-center mt-5">
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <a href="{{ url_for('fish_products') }}" class="btn btn-outline-primary btn-lg w-100">
-                            🐟 View All Fish Products
-                        </a>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <a href="{{ url_for('vegetable_products') }}" class="btn btn-outline-success btn-lg w-100">
-                            🥬 View All Vegetables
-                        </a>
-                    </div>
-                </div>
-            </div>
         {% else %}
             <div class="text-center py-5">
                 <div class="fs-1 text-muted mb-3">📦</div>
                 <h4 class="text-muted">No products available</h4>
-                <p class="text-muted">Check back soon for fresh arrivals!</p>
+                {% if current_category != 'all' %}
+                    <p class="text-muted">No products found in the {{ current_category }} category.</p>
+                    <a href="{{ url_for('home') }}" class="btn btn-primary">View All Products</a>
+                {% else %}
+                    <p class="text-muted">Check back soon for fresh arrivals!</p>
+                {% endif %}
             </div>
         {% endif %}
     </div>
@@ -151,6 +169,19 @@ function addToCart(productId) {
     // For now, just show an alert
     // We'll implement proper cart functionality later
     alert('Product will be added to cart! (Feature coming soon)');
+}
+
+function updateFilters() {
+    const category = document.getElementById('categoryFilter').value;
+    const sort = document.getElementById('sortFilter').value;
+    
+    // Build URL with query parameters
+    const url = new URL(window.location.href);
+    url.searchParams.set('category', category);
+    url.searchParams.set('sort', sort);
+    
+    // Navigate to the new URL
+    window.location.href = url.toString();
 }
 </script>
 {% endblock %}
