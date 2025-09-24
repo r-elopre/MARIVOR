@@ -5,10 +5,10 @@ A modern web application for ordering fresh fish and vegetables with innovative 
 ## ✨ Features Implemented
 
 ### 🔐 Authentication System
-- **SMS OTP Verification** - Traditional phone number authentication via Twilio
 - **Face Detection Registration** - AI-powered face recognition using face-api.js
-- **6-Digit Face Login Codes** - Quick login alternative to SMS
+- **6-Digit Face Login Codes** - Secure login with unique codes
 - **User Profile Management** - View account details and face login codes
+- **Cloud Storage Integration** - Secure face photo storage in Supabase
 
 ### 🛒 E-commerce Core
 - **Product Categories** - Fish and Vegetable sections
@@ -22,27 +22,27 @@ A modern web application for ordering fresh fish and vegetables with innovative 
 - **Auto-capture** - Smart photo capture when face is properly positioned
 - **Visual Feedback** - Color-coded overlay for detection status
 
-### 💾 Database Structure
-- **SQLite Database** - User management and product storage
-- **Face Photo Storage** - File-based image storage with database paths
+### 💾 Database & Storage
+- **Supabase Database** - PostgreSQL-based user management and product storage
+- **Supabase Storage** - Cloud-based face photo and product image storage
 - **User Sessions** - Secure session management
-- **Order Tracking** - Order and cart item persistence
+- **Order Tracking** - Real-time order and cart management
 
 ## 🛠️ Technology Stack
 
 - **Backend**: Flask (Python)
 - **Frontend**: HTML5, Bootstrap 5, JavaScript
 - **AI/ML**: face-api.js with TinyFaceDetector
-- **Database**: SQLite
-- **Authentication**: Twilio SMS + Custom Face Recognition
-- **Storage**: Local file system (photos)
+- **Database**: Supabase (PostgreSQL)
+- **Authentication**: Face Recognition Only
+- **Storage**: Supabase Cloud Storage
 
 ## 📁 Project Structure
 
 ```
 Marivor/
 ├── app.py                 # Main Flask application
-├── auth_utils.py          # Authentication utilities
+├── supabase_utils.py      # Supabase database utilities
 ├── templates/            # HTML templates
 │   ├── base.html         # Base template
 │   ├── face_register.html # Face detection registration
@@ -52,8 +52,7 @@ Marivor/
 ├── static/              # Static assets
 │   ├── css/             # Stylesheets
 │   ├── js/              # JavaScript files
-│   └── face_photos/     # User face photos (excluded from git)
-├── scripts/             # Database and utility scripts
+│   └── face_photos/     # Local face photos (deprecated, now using Supabase Storage)
 └── requirements.txt     # Python dependencies
 ```
 
@@ -82,15 +81,15 @@ Marivor/
    ```bash
    # Create .env file with:
    SECRET_KEY=your_secret_key
-   TWILIO_ACCOUNT_SID=your_twilio_sid
-   TWILIO_AUTH_TOKEN=your_twilio_token
-   TWILIO_PHONE_NUMBER=your_twilio_number
+   SUPABASE_URL=your_supabase_url
+   SUPABASE_KEY=your_supabase_anon_key
+   SUPABASE_STORAGE_BUCKET=faces
    ```
 
-5. **Initialize database**
-   ```bash
-   python scripts/create_database.py
-   ```
+5. **Set up Supabase**
+   - Create tables: `users`, `products`, `orders`
+   - Create storage bucket: `faces` and `products`
+   - Configure proper RLS policies
 
 6. **Run the application**
    ```bash
@@ -114,10 +113,10 @@ Marivor/
 
 ## 🔮 Future Plans
 
-### 📊 Database Migration
-- **Moving to Supabase** - PostgreSQL database with built-in image storage
-- **Cloud Image Storage** - Secure and scalable photo management
-- **Better Performance** - Faster queries and image serving
+### � Platform Features
+- **Multi-vendor Support** - Ready for seller onboarding
+- **Real-time Notifications** - Order status updates
+- **Advanced Analytics** - Sales and user insights
 
 ### 🛡️ Security Enhancements
 - **Photo Encryption** - Encrypt stored face photos
@@ -146,5 +145,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 🙏 Acknowledgments
 
 - **face-api.js** - For the excellent face detection library
-- **Twilio** - For SMS authentication services
+- **Supabase** - For the powerful backend-as-a-service platform
 - **Bootstrap** - For the responsive UI framework

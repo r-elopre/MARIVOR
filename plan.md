@@ -8,37 +8,33 @@
   - `app.py` - Main application file
   - `templates/` - HTML templates folder
   - `static/` - CSS, JS, and images folder
-- [ ] Install required packages:
-  - Flask
-  - SQLAlchemy/SQLite
-  - Twilio SMS API SDK
+- [x] Install required packages:
+  - Flask ✅
+  - Supabase Python SDK ✅
+  - Face-API.js for face detection ✅
 - [ ] Set up base HTML template with Bootstrap/Tailwind for styling
 
-### 🗄️ Step 2: Database Models
+### 🗄️ Step 2: Database Models (Supabase)
 
-Create database tables with the following structure:
+Database tables implemented in Supabase:
 
-- **Users table**: `id`, `phone_number`, `is_verified`, `created_at`
-- **OTP table**: `id`, `phone_number`, `otp_code` (hashed), `expires_at`, `attempts`
-- **Products table**: `id`, `name`, `category` (Fish/Vegetable), `price`, `stock`, `image_url`
-- **Orders table**: `id`, `user_id`, `items`, `total_price`, `status`
+- **Users table**: `id`, `username`, `phone_number`, `face_login_code`, `face_photo_*`, `is_verified`, `created_at` ✅
+- **Products table**: `id`, `name`, `category` (Fish/Vegetable), `price`, `stock`, `unit`, `image_url` ✅
+- **Orders table**: `id`, `user_id`, `items`, `total_price`, `status`, `created_at` ✅
+- **Storage buckets**: `faces` (user photos), `products` (product images) ✅
 
-### 📱 Step 3: User Signup & Login (OTP Flow)
+### 📱 Step 3: User Authentication (Face Recognition) ✅
 
-#### Phone Number Entry
-- User enters phone number in HTML form
+#### Face Registration Flow
+- **Face Detection**: Real-time camera capture with face-api.js ✅
+- **Multi-angle Capture**: Front, left, right face photos ✅
+- **Supabase Storage**: Secure cloud storage for face photos ✅
+- **Auto-generated Codes**: 6-digit login codes for each user ✅
 
-#### `/send_otp` Route
-- Validate phone number format
-- Generate 6-digit OTP code
-- Store OTP (hashed) with expiration time
-- Send OTP via SMS API
-
-#### `/verify_otp` Route
-- Check OTP against stored value and expiry
-- If valid:
-  - Log user in (store `user_id` in session)
-  - Create new account if first-time user
+#### Face Login Flow
+- **Code Entry**: Users enter their 6-digit face login code ✅
+- **Session Management**: Secure user sessions ✅
+- **Profile Access**: View account details and login code ✅
 
 ### 🔐 Step 4: Session & Authentication
 
@@ -103,10 +99,13 @@ Create `base.html` template with navbar containing:
 
 ## 📋 Project Status
 - ✅ Environment setup (`.env` file)
-- ✅ Database created (`marivor.db`)
-- ✅ Sample data populated
-- ⏳ Flask application development
-- ⏳ Authentication system
-- ⏳ Product catalog
-- ⏳ Shopping cart
-- ⏳ Admin panel
+- ✅ Supabase database setup with tables and storage
+- ✅ Face recognition authentication system
+- ✅ Flask application with full routing
+- ✅ Product catalog system
+- ✅ Admin panel with product management
+- ✅ Modern responsive UI with Bootstrap 5
+- ⏳ Shopping cart implementation (session-based placeholder)
+- ⏳ Order management system completion
+- ⏳ Payment integration
+- ⏳ Multi-vendor seller dashboard

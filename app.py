@@ -1,8 +1,6 @@
 import os
-import sqlite3
 from datetime import datetime
 from flask import Flask, render_template, request, session, redirect, url_for, flash, jsonify
-from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 from supabase_utils import get_supabase_client
 
@@ -12,14 +10,7 @@ load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 
-# Database configuration
-DATABASE = os.getenv('DATABASE_URL', 'sqlite:///marivor.db').replace('sqlite:///', '')
-
-def get_db_connection():
-    """Get database connection"""
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row  # This allows us to access columns by name
-    return conn
+# All database operations now handled through Supabase
 
 def get_products_by_category(category=None, limit=None):
     """Get products filtered by category from Supabase"""

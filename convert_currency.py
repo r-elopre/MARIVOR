@@ -1,42 +1,28 @@
 """
-Currency Conversion Script - USD to PHP
-Converts existing product prices from USD to Philippine Peso
+Currency Conversion Utility - USD to PHP
+Utility functions for converting product prices from USD to Philippine Peso
 
-Note: Run this script if you have existing products in USD that need to be converted to PHP
+NOTE: This script is now for reference only since we're using Supabase.
+All products should be added directly in PHP currency via the admin panel.
+
 Exchange rate used: 1 USD = 56 PHP (approximate, update as needed)
 """
 
-import sqlite3
-import os
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
+from supabase_utils import get_supabase_client
 
 # Exchange rate (1 USD = X PHP)
 USD_TO_PHP_RATE = 56.0
 
-def convert_sqlite_prices():
-    """Convert prices in SQLite database from USD to PHP"""
-    DATABASE = os.getenv('DATABASE_URL', 'sqlite:///marivor.db').replace('sqlite:///', '')
-    
-    if not os.path.exists(DATABASE):
-        print(f"Database file {DATABASE} not found. Skipping SQLite conversion.")
-        return
-    
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
+def convert_supabase_prices():
+    """Convert prices in Supabase from USD to PHP"""
+    print("🇵🇭 Currency Conversion: USD → PHP for Supabase")
+    print("=" * 50)
     
     try:
-        # Check if products table exists
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='products'")
-        if not cursor.fetchone():
-            print("Products table not found in SQLite database.")
-            return
+        client = get_supabase_client()
         
         # Get all products
-        cursor.execute("SELECT id, name, price FROM products")
-        products = cursor.fetchall()
+        products = client.get_all_products()
         
         if not products:
             print("No products found to convert.")
@@ -46,84 +32,69 @@ def convert_sqlite_prices():
         print(f"Exchange rate: 1 USD = {USD_TO_PHP_RATE} PHP")
         print("-" * 50)
         
-        for product_id, name, usd_price in products:
+        for product in products:
+            product_id = product['id']
+            name = product['name']
+            usd_price = product['price']
             php_price = round(usd_price * USD_TO_PHP_RATE, 2)
             
-            # Update the price
-            cursor.execute("UPDATE products SET price = ? WHERE id = ?", (php_price, product_id))
+            # Update the price in Supabase
+            success = client.update_product(product_id, price=php_price)
             
-            print(f"  {name}: ${usd_price:.2f} → ₱{php_price:.2f}")
+            if success:
+                print(f"  ✅ {name}: ${usd_price:.2f} → ₱{php_price:.2f}")
+            else:
+                print(f"  ❌ Failed to update {name}")
         
-        conn.commit()
         print("-" * 50)
-        print(f"✅ Successfully converted {len(products)} products to PHP!")
+        print(f"✅ Currency conversion complete!")
         
     except Exception as e:
         print(f"❌ Error converting prices: {e}")
-        conn.rollback()
-    finally:
-        conn.close()
 
-def create_php_sample_products():
-    """Create sample products with PHP pricing"""
-    DATABASE = os.getenv('DATABASE_URL', 'sqlite:///marivor.db').replace('sqlite:///', '')
+def create_sample_php_products():
+    """Add sample products with PHP pricing to Supabase"""
+    print("Creating sample products with PHP pricing in Supabase...")
     
     sample_products = [
         # Fish products (prices in PHP)
-        ("Fresh Salmon", "Fish", 899.00, 25, "/static/images/salmon.jpg"),
-        ("Premium Tuna", "Fish", 699.00, 20, "/static/images/tuna.jpg"),
-        ("Sea Bass Fillet", "Fish", 799.00, 15, "/static/images/seabass.jpg"),
-        ("Red Snapper", "Fish", 649.00, 18, "/static/images/snapper.jpg"),
+        ("Fresh Salmon", "Fish", 899.00, 25, True),
+        ("Premium Tuna", "Fish", 699.00, 20, True),
+        ("Sea Bass Fillet", "Fish", 799.00, 15, True),
+        ("Red Snapper", "Fish", 649.00, 18, True),
         
         # Vegetable products (prices in PHP)
-        ("Organic Spinach", "Vegetable", 149.00, 50, "/static/images/spinach.jpg"),
-        ("Fresh Tomatoes", "Vegetable", 89.00, 60, "/static/images/tomatoes.jpg"),
-        ("Bell Peppers", "Vegetable", 199.00, 40, "/static/images/peppers.jpg"),
-        ("Fresh Broccoli", "Vegetable", 169.00, 35, "/static/images/broccoli.jpg"),
+        ("Organic Spinach", "Vegetable", 149.00, 50, False),
+        ("Fresh Tomatoes", "Vegetable", 89.00, 60, False),
+        ("Bell Peppers", "Vegetable", 199.00, 40, False),
+        ("Fresh Broccoli", "Vegetable", 169.00, 35, False),
     ]
     
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
-    
     try:
-        # Check if products table exists and is empty
-        cursor.execute("SELECT COUNT(*) FROM products")
-        count = cursor.fetchone()[0]
+        client = get_supabase_client()
         
-        if count > 0:
-            print(f"Products table already has {count} products. Skipping sample product creation.")
-            return
-        
-        print("Creating sample products with PHP pricing...")
-        
-        for name, category, price, stock, image_url in sample_products:
-            cursor.execute("""
-                INSERT INTO products (name, category, price, stock, image_url, is_active, created_at)
-                VALUES (?, ?, ?, ?, ?, 1, datetime('now'))
-            """, (name, category, price, stock, image_url))
+        for name, category, price, stock, unit in sample_products:
+            result = client.add_product(name, category, price, stock)
             
-            print(f"  Added: {name} - ₱{price:.2f}")
+            if result['success']:
+                print(f"  ✅ Added: {name} - ₱{price:.2f}")
+            else:
+                print(f"  ❌ Failed to add: {name} - {result.get('error', 'Unknown error')}")
         
-        conn.commit()
-        print(f"✅ Successfully created {len(sample_products)} sample products with PHP pricing!")
+        print(f"✅ Sample products creation complete!")
         
     except Exception as e:
         print(f"❌ Error creating sample products: {e}")
-        conn.rollback()
-    finally:
-        conn.close()
 
 if __name__ == "__main__":
-    print("🇵🇭 Currency Conversion: USD → PHP")
-    print("=" * 40)
+    print("🇵🇭 Supabase Currency Conversion Utility")
+    print("=" * 50)
+    print("💡 All products should now be added directly in PHP via the admin panel.")
+    print("💡 This script is for converting existing USD prices only.")
+    print("")
     
-    # First, try to convert existing products
-    convert_sqlite_prices()
-    
-    print("\n" + "=" * 40)
-    
-    # Then, create sample products if database is empty
-    create_php_sample_products()
-    
-    print("\n✅ Currency conversion complete!")
-    print("💡 Remember to update your Supabase products table with PHP pricing as well.")
+    choice = input("Convert existing USD prices to PHP? (y/n): ").lower().strip()
+    if choice == 'y':
+        convert_supabase_prices()
+    else:
+        print("No conversion performed.")
