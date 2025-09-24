@@ -34,6 +34,27 @@
                 <p class="text-muted">Choose from our fresh selection</p>
             </div>
             <div class="col-md-6">
+                <!-- Search Bar -->
+                <div class="mb-3">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="searchInput" 
+                               placeholder="Search by product name or seller name..." 
+                               value="{{ current_search or '' }}" onkeypress="handleSearchKeypress(event)">
+                        <button class="btn btn-primary" type="button" onclick="performSearch()">
+                            <i class="bi bi-search"></i> Search
+                        </button>
+                        {% if current_search %}
+                            <button class="btn btn-outline-secondary" type="button" onclick="clearSearch()" title="Clear search">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        {% endif %}
+                    </div>
+                    <small class="text-muted">
+                        <i class="bi bi-info-circle"></i> 
+                        Search for products by name (e.g., "tilapia") or find products from specific sellers (e.g., "Marivor Official")
+                    </small>
+                </div>
+                
                 <div class="row g-3">
                     <!-- Category Filter -->
                     <div class="col-sm-6">
@@ -62,12 +83,21 @@
         {% if products %}
             <!-- Product Stats -->
             <div class="mb-4">
-                <span class="badge bg-secondary fs-6">
-                    {{ products|length }} products found
-                    {% if current_category != 'all' %} 
-                        in {{ current_category }}
-                    {% endif %}
-                </span>
+                {% if current_search %}
+                    <span class="badge bg-info fs-6">
+                        {{ products|length }} products found for "{{ current_search }}"
+                    </span>
+                    <a href="{{ url_for('home') }}" class="btn btn-link btn-sm text-decoration-none">
+                        <i class="bi bi-arrow-left"></i> Show all products
+                    </a>
+                {% else %}
+                    <span class="badge bg-secondary fs-6">
+                        {{ products|length }} products found
+                        {% if current_category != 'all' %} 
+                            in {{ current_category }}
+                        {% endif %}
+                    </span>
+                {% endif %}
             </div>
             
             <div class="row g-4">
@@ -209,13 +239,49 @@ function updateFilters() {
     const category = document.getElementById('categoryFilter').value;
     const sort = document.getElementById('sortFilter').value;
     
-    // Build URL with query parameters
+    // Build URL with query parameters (preserve search if exists)
     const url = new URL(window.location.href);
     url.searchParams.set('category', category);
     url.searchParams.set('sort', sort);
     
     // Navigate to the new URL
     window.location.href = url.toString();
+}
+
+function performSearch() {
+    const searchInput = document.getElementById('searchInput');
+    const searchQuery = searchInput.value.trim();
+    
+    // Build URL with search parameter
+    const url = new URL(window.location.origin + window.location.pathname);
+    if (searchQuery) {
+        url.searchParams.set('search', searchQuery);
+        // Keep current sort preference
+        const currentSort = document.getElementById('sortFilter').value;
+        url.searchParams.set('sort', currentSort);
+    }
+    
+    // Navigate to search results
+    window.location.href = url.toString();
+}
+
+function clearSearch() {
+    // Go back to home page without search
+    const url = new URL(window.location.origin + window.location.pathname);
+    const currentSort = document.getElementById('sortFilter').value;
+    const currentCategory = document.getElementById('categoryFilter').value;
+    
+    if (currentSort !== 'newest') url.searchParams.set('sort', currentSort);
+    if (currentCategory !== 'all') url.searchParams.set('category', currentCategory);
+    
+    window.location.href = url.toString();
+}
+
+function handleSearchKeypress(event) {
+    // Trigger search when Enter key is pressed
+    if (event.key === 'Enter') {
+        performSearch();
+    }
 }
 </script>
 {% endblock %}

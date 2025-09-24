@@ -47,15 +47,22 @@ def home():
     # Get query parameters
     category = request.args.get('category', 'all')  # all, Fish, Vegetables
     sort_by = request.args.get('sort', 'newest')     # newest, price_low, price_high
+    search_query = request.args.get('search', '').strip()  # search by product name
     
     try:
         supabase_client = get_supabase_client()
         
-        # Get all products
-        if category == 'all':
+        # Get products based on search or category
+        if search_query:
+            products = supabase_client.search_products(search_query)
+            # If searching, ignore category filter (show all matching results)
+            current_category = 'all'
+        elif category == 'all':
             products = supabase_client.get_all_products()
+            current_category = category
         else:
             products = supabase_client.get_products_by_category(category)
+            current_category = category
         
         # Sort products
         if sort_by == 'price_low':
@@ -68,8 +75,9 @@ def home():
         
         return render_template('home.html', 
                              products=products,
-                             current_category=category,
+                             current_category=current_category,
                              current_sort=sort_by,
+                             current_search=search_query,
                              page_title="Fresh Fish & Vegetables - Marivor")
     
     except Exception as e:

@@ -165,6 +165,62 @@ class SupabaseClient:
             print(f"Error getting products by category: {e}")
             return []
     
+    def search_products(self, search_query: str) -> List[Dict[str, Any]]:
+        """Search products by name OR seller store name with seller information"""
+        try:
+            if not search_query or search_query.strip() == '':
+                return []
+                
+            # Get all sellers first to create mapping
+            sellers_response = self.client.table('sellers').select('id, store_name').execute()
+            sellers_dict = {seller['id']: seller['store_name'] for seller in (sellers_response.data or [])}
+            
+            # Search products by name (case-insensitive)
+            products_by_name = self.client.table('products').select('*').ilike('name', f'%{search_query}%').execute()
+            products_by_name = products_by_name.data if products_by_name.data else []
+            
+            # Search sellers by store name and get their products
+            sellers_matching = self.client.table('sellers').select('id, store_name').ilike('store_name', f'%{search_query}%').execute()
+            sellers_matching = sellers_matching.data if sellers_matching.data else []
+            
+            products_by_seller = []
+            for seller in sellers_matching:
+                seller_products = self.client.table('products').select('*').eq('seller_id', seller['id']).execute()
+                if seller_products.data:
+                    products_by_seller.extend(seller_products.data)
+            
+            # Check if "admin" or "marivor" is in search query for admin products
+            admin_keywords = ['admin', 'marivor', 'official']
+            products_by_admin = []
+            if any(keyword in search_query.lower() for keyword in admin_keywords):
+                admin_products = self.client.table('products').select('*').is_('seller_id', 'null').execute()
+                if admin_products.data:
+                    products_by_admin = admin_products.data
+            
+            # Combine all results and remove duplicates
+            all_products = products_by_name + products_by_seller + products_by_admin
+            unique_products = []
+            seen_ids = set()
+            
+            for product in all_products:
+                if product['id'] not in seen_ids:
+                    unique_products.append(product)
+                    seen_ids.add(product['id'])
+            
+            # Add seller info to each product
+            for product in unique_products:
+                if product.get('seller_id') and product['seller_id'] is not None:
+                    # Seller-created product - lookup store name
+                    product['seller_store_name'] = sellers_dict.get(product['seller_id'], 'Unknown Seller')
+                else:
+                    # Admin-created product (seller_id is NULL)
+                    product['seller_store_name'] = 'Marivor Official'
+                    
+            return unique_products
+        except Exception as e:
+            print(f"Error searching products: {e}")
+            return []
+    
     def add_product(self, name: str, category: str, price: float, stock: int, image_url: str = "", 
                    seller_id: int = None, created_by: str = "admin", description: str = "", unit: bool = True) -> Dict[str, Any]:
         """Add a new product"""
