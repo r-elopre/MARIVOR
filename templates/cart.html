@@ -128,6 +128,66 @@
                                 </div>
                             </div>
                             
+                            <!-- Shipping Address Form -->
+                            <div class="card shadow-sm mb-4">
+                                <div class="card-header bg-info text-white">
+                                    <h5 class="mb-0"><i class="bi bi-geo-alt-fill me-2"></i>Shipping Address</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form id="addressForm">
+                                        <div class="row">
+                                            <!-- Province (Fixed) -->
+                                            <div class="col-md-6 mb-3">
+                                                <label for="province" class="form-label">Province</label>
+                                                <input type="text" class="form-control" id="province" value="Rizal" readonly>
+                                            </div>
+                                            
+                                            <!-- City (Fixed) -->
+                                            <div class="col-md-6 mb-3">
+                                                <label for="city" class="form-label">City</label>
+                                                <input type="text" class="form-control" id="city" value="Rodriguez" readonly>
+                                            </div>
+                                            
+                                            <!-- Barangay (Fixed) -->
+                                            <div class="col-md-6 mb-3">
+                                                <label for="barangay" class="form-label">Barangay</label>
+                                                <input type="text" class="form-control" id="barangay" value="San Isidro" readonly>
+                                            </div>
+                                            
+                                            <!-- Village (Fixed) -->
+                                            <div class="col-md-6 mb-3">
+                                                <label for="village" class="form-label">Village</label>
+                                                <input type="text" class="form-control" id="village" value="Southville 8B" readonly>
+                                            </div>
+                                            
+                                            <!-- Street (Selectable) -->
+                                            <div class="col-md-6 mb-3">
+                                                <label for="street" class="form-label">Street/Phase <span class="text-danger">*</span></label>
+                                                <select class="form-select" id="street" required>
+                                                    <option value="">Select Phase</option>
+                                                    <option value="Phase 2">Phase 2</option>
+                                                    <option value="Phase 4">Phase 4</option>
+                                                </select>
+                                            </div>
+                                            
+                                            <!-- House Number (Input) -->
+                                            <div class="col-md-6 mb-3">
+                                                <label for="houseNumber" class="form-label">House Number <span class="text-danger">*</span></label>
+                                                <input type="text" class="form-control" id="houseNumber" placeholder="e.g., Block 1 Lot 23" required>
+                                            </div>
+                                            
+                                            <!-- Full Address Display -->
+                                            <div class="col-12">
+                                                <label class="form-label">Complete Address</label>
+                                                <div class="form-control bg-light" id="fullAddress" style="min-height: 60px;">
+                                                    <small class="text-muted">Your complete address will appear here</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                            
                             <!-- Action Buttons -->
                             <div class="d-flex justify-content-between">
                                 <a href="{{ url_for('home') }}" class="btn btn-outline-primary">
@@ -207,6 +267,127 @@
                     <span class="visually-hidden">Loading...</span>
                 </div>
                 <p class="mb-0">Updating cart...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Checkout Confirmation Modal -->
+<div class="modal fade" id="checkoutModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-credit-card-2-front me-2"></i>
+                    Order Confirmation
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Customer Info Section -->
+                <div class="row mb-4">
+                    <div class="col-md-8">
+                        <h6 class="fw-bold text-primary mb-3">
+                            <i class="bi bi-person-circle me-2"></i>Customer Information
+                        </h6>
+                        <div class="row">
+                            <div class="col-sm-6 mb-2">
+                                <strong>Name:</strong> <span id="checkoutCustomerName">-</span>
+                            </div>
+                            <div class="col-sm-6 mb-2">
+                                <strong>Email:</strong> <span id="checkoutCustomerEmail">-</span>
+                            </div>
+                            <div class="col-sm-6 mb-2">
+                                <strong>Phone:</strong> <span id="checkoutCustomerPhone">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <h6 class="fw-bold text-primary mb-2">Profile Photo</h6>
+                        <div id="checkoutFacePhoto" class="border rounded p-2" style="min-height: 120px;">
+                            <div class="text-muted">
+                                <i class="bi bi-person-circle" style="font-size: 4rem;"></i>
+                                <p class="small mb-0">No photo available</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Shipping Address Section -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary mb-3">
+                        <i class="bi bi-geo-alt-fill me-2"></i>Shipping Address
+                    </h6>
+                    <div class="bg-light p-3 rounded">
+                        <p id="checkoutShippingAddress" class="mb-0">-</p>
+                    </div>
+                </div>
+
+                <!-- Order Items Section -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary mb-3">
+                        <i class="bi bi-cart-fill me-2"></i>Order Items
+                    </h6>
+                    <div id="checkoutItems" class="border rounded">
+                        <!-- Items will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Order Summary Section -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary mb-3">
+                        <i class="bi bi-receipt me-2"></i>Order Summary
+                    </h6>
+                    <div class="bg-light p-3 rounded">
+                        <div class="row">
+                            <div class="col-6">
+                                <strong>Items (<span id="checkoutTotalItems">0</span>):</strong>
+                            </div>
+                            <div class="col-6 text-end">
+                                <strong>₱<span id="checkoutTotalAmount">0.00</span></strong>
+                            </div>
+                        </div>
+                        <hr class="my-2">
+                        <div class="row">
+                            <div class="col-6">
+                                <strong>Delivery Fee:</strong>
+                            </div>
+                            <div class="col-6 text-end">
+                                <strong class="text-success">FREE</strong>
+                            </div>
+                        </div>
+                        <hr class="my-2">
+                        <div class="row">
+                            <div class="col-6">
+                                <h5 class="fw-bold mb-0">Total Amount:</h5>
+                            </div>
+                            <div class="col-6 text-end">
+                                <h5 class="fw-bold text-primary mb-0">₱<span id="checkoutFinalTotal">0.00</span></h5>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Method -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary mb-3">
+                        <i class="bi bi-cash-coin me-2"></i>Payment Method
+                    </h6>
+                    <div class="bg-warning bg-opacity-25 p-3 rounded text-center">
+                        <h5 class="text-warning mb-2">
+                            <i class="bi bi-cash-stack me-2"></i>Cash on Delivery (COD)
+                        </h5>
+                        <small class="text-muted">Pay when you receive your order</small>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-arrow-left me-2"></i>Back to Cart
+                </button>
+                <button type="button" class="btn btn-success btn-lg" id="confirmOrderBtn" onclick="confirmOrder()">
+                    <i class="bi bi-check-circle me-2"></i>Confirm Order
+                </button>
             </div>
         </div>
     </div>
@@ -466,9 +647,212 @@ function clearCart() {
 }
 
 function proceedToCheckout() {
-    // For now, just show a message
-    // This will be implemented when you add checkout functionality
-    showNotification('Checkout functionality coming soon!', 'info');
+    // Validate address form first
+    const street = document.getElementById('street').value;
+    const houseNumber = document.getElementById('houseNumber').value.trim();
+    
+    if (!street) {
+        showNotification('Please select a street/phase', 'warning');
+        document.getElementById('street').focus();
+        return;
+    }
+    
+    if (!houseNumber) {
+        showNotification('Please enter your house number', 'warning');
+        document.getElementById('houseNumber').focus();
+        return;
+    }
+    
+    // Get the complete address
+    const fullAddress = getFullAddress();
+    
+    // Store address data for checkout
+    const shippingData = {
+        province: 'Rizal',
+        city: 'Rodriguez', 
+        barangay: 'San Isidro',
+        village: 'Southville 8B',
+        street: street,
+        houseNumber: houseNumber,
+        fullAddress: fullAddress
+    };
+    
+    sessionStorage.setItem('shippingAddress', JSON.stringify(shippingData));
+    
+    // Show loading
+    showLoading();
+    
+    // Get user details and populate checkout modal
+    fetch('/api/user/details')
+    .then(response => response.json())
+    .then(userData => {
+        if (!userData.success) {
+            throw new Error(userData.error || 'Failed to get user details');
+        }
+        
+        populateCheckoutModal(userData.user, shippingData);
+        hideLoading();
+        
+        // Show checkout modal
+        const modal = new bootstrap.Modal(document.getElementById('checkoutModal'));
+        modal.show();
+    })
+    .catch(error => {
+        hideLoading();
+        console.error('Error:', error);
+        showNotification('Failed to load checkout details', 'danger');
+    });
+}
+
+function populateCheckoutModal(user, shippingData) {
+    // Populate customer info
+    document.getElementById('checkoutCustomerName').textContent = user.full_name || user.first_name + ' ' + user.last_name || 'N/A';
+    document.getElementById('checkoutCustomerEmail').textContent = user.email || 'N/A';
+    document.getElementById('checkoutCustomerPhone').textContent = user.phone || 'N/A';
+    
+    // Populate face photo
+    const facePhotoContainer = document.getElementById('checkoutFacePhoto');
+    if (user.face_photo_front) {
+        facePhotoContainer.innerHTML = `
+            <img src="${user.face_photo_front}" alt="Profile Photo" 
+                 class="img-fluid rounded border" style="max-height: 120px; max-width: 120px; object-fit: cover;">
+        `;
+    } else {
+        facePhotoContainer.innerHTML = `
+            <div class="text-muted">
+                <i class="bi bi-person-circle" style="font-size: 4rem;"></i>
+                <p class="small mb-0">No photo available</p>
+            </div>
+        `;
+    }
+    
+    // Populate shipping address
+    document.getElementById('checkoutShippingAddress').textContent = shippingData.fullAddress;
+    
+    // Populate cart items (get from current page)
+    populateCheckoutItems();
+    
+    // Populate totals
+    const totalItems = parseInt('{{ cart_total_items }}') || 0;
+    const totalAmount = parseFloat('{{ cart_total_price }}') || 0.0;
+    
+    document.getElementById('checkoutTotalItems').textContent = totalItems;
+    document.getElementById('checkoutTotalAmount').textContent = totalAmount.toFixed(2);
+    document.getElementById('checkoutFinalTotal').textContent = totalAmount.toFixed(2);
+}
+
+function populateCheckoutItems() {
+    const checkoutItemsContainer = document.getElementById('checkoutItems');
+    const cartItems = document.querySelectorAll('.cart-item');
+    
+    let itemsHtml = '';
+    
+    cartItems.forEach(item => {
+        const productId = item.dataset.productId;
+        const name = item.querySelector('h6').textContent.trim();
+        const seller = item.querySelector('.text-muted.small').textContent.replace('🏪 ', '').trim();
+        const price = item.querySelector('.fw-bold.text-primary').textContent.trim();
+        const quantity = item.querySelector('.quantity-input, input[type="number"]').value;
+        const image = item.querySelector('img');
+        
+        itemsHtml += `
+            <div class="d-flex align-items-center p-3 border-bottom">
+                <div class="flex-shrink-0 me-3">
+                    ${image ? 
+                        `<img src="${image.src}" alt="${name}" class="rounded" style="width: 50px; height: 50px; object-fit: cover;">` :
+                        `<div class="bg-light rounded d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                            <span style="font-size: 1.5rem;">🐟</span>
+                        </div>`
+                    }
+                </div>
+                <div class="flex-grow-1">
+                    <h6 class="mb-1">${name}</h6>
+                    <small class="text-muted">${seller}</small>
+                    <div class="mt-1">
+                        <span class="fw-bold">${price}</span> × ${quantity}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    checkoutItemsContainer.innerHTML = itemsHtml || '<p class="text-muted p-3 mb-0">No items found</p>';
+}
+
+function confirmOrder() {
+    const confirmBtn = document.getElementById('confirmOrderBtn');
+    const originalText = confirmBtn.innerHTML;
+    
+    // Disable button and show loading
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = '<i class="spinner-border spinner-border-sm me-2"></i>Processing...';
+    
+    // Get shipping address
+    const shippingAddress = JSON.parse(sessionStorage.getItem('shippingAddress'));
+    
+    // Prepare order data
+    const orderData = {
+        shipping_address: shippingAddress.fullAddress
+    };
+    
+    // Submit order
+    fetch('/api/order/create', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Hide checkout modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal'));
+            modal.hide();
+            
+            // Show success message
+            showNotification(`Order #${data.order_number} created successfully! 🎉`, 'success');
+            
+            // Clear cart and redirect to home
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 2000);
+        } else {
+            throw new Error(data.error || 'Failed to create order');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Failed to create order: ' + error.message, 'danger');
+    })
+    .finally(() => {
+        // Re-enable button
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = originalText;
+    });
+}
+
+// Function to build and display full address
+function getFullAddress() {
+    const houseNumber = document.getElementById('houseNumber').value.trim();
+    const street = document.getElementById('street').value;
+    
+    if (!houseNumber || !street) {
+        return '';
+    }
+    
+    return `${houseNumber}, ${street}, Southville 8B, San Isidro, Rodriguez, Rizal`;
+}
+
+function updateFullAddress() {
+    const fullAddress = getFullAddress();
+    const fullAddressDiv = document.getElementById('fullAddress');
+    
+    if (fullAddress) {
+        fullAddressDiv.innerHTML = `<strong>${fullAddress}</strong>`;
+    } else {
+        fullAddressDiv.innerHTML = '<small class="text-muted">Your complete address will appear here</small>';
+    }
 }
 
 function showLoading() {
@@ -504,5 +888,16 @@ function showNotification(message, type = 'info') {
         }
     }, 4000);
 }
+
+// Initialize address form listeners
+document.addEventListener('DOMContentLoaded', function() {
+    const streetSelect = document.getElementById('street');
+    const houseNumberInput = document.getElementById('houseNumber');
+    
+    if (streetSelect && houseNumberInput) {
+        streetSelect.addEventListener('change', updateFullAddress);
+        houseNumberInput.addEventListener('input', updateFullAddress);
+    }
+});
 </script>
 {% endblock %}

@@ -383,6 +383,141 @@ def api_cart_get():
         print(f"Cart get error: {e}")
         return jsonify({'success': False, 'error': 'Failed to get cart data'})
 
+# User API Routes
+@app.route('/api/user/details', methods=['GET'])
+def api_user_details():
+    """Get current user details for checkout"""
+    try:
+        if not is_logged_in():
+            return jsonify({'success': False, 'error': 'Please log in first'})
+        
+        phone_number = session.get('phone_number')
+        if not phone_number:
+            return jsonify({'success': False, 'error': 'User session invalid'})
+        
+        supabase_client = get_supabase_client()
+        user_info = supabase_client.get_user_by_phone(phone_number)
+        
+        if not user_info:
+            return jsonify({'success': False, 'error': 'User not found'})
+        
+        return jsonify({
+            'success': True,
+            'user': {
+                'phone': user_info.get('phone'),
+                'full_name': user_info.get('full_name'),
+                'first_name': user_info.get('first_name'),
+                'last_name': user_info.get('last_name'),
+                'email': user_info.get('email'),
+                'face_photo_front': user_info.get('face_photo_front')
+            }
+        })
+        
+    except Exception as e:
+        print(f"User details error: {e}")
+        return jsonify({'success': False, 'error': 'Failed to get user details'})
+
+# Order API Routes
+@app.route('/api/order/create', methods=['POST'])
+def api_order_create():
+    """Create a new order"""
+    try:
+        if not is_logged_in():
+            return jsonify({'success': False, 'error': 'Please log in first'})
+        
+        phone_number = session.get('phone_number')
+        if not phone_number:
+            return jsonify({'success': False, 'error': 'User session invalid'})
+        
+        # Get request data
+        data = request.get_json()
+        shipping_address = data.get('shipping_address', '').strip()
+        order_notes = data.get('order_notes', '').strip()
+        
+        if not shipping_address:
+            return jsonify({'success': False, 'error': 'Shipping address is required'})
+        
+        # Get cart data
+        cart_data = session.get('cart', {'items': [], 'total_items': 0, 'total_price': 0.0})
+        
+        if not cart_data.get('items') or cart_data.get('total_items', 0) == 0:
+            return jsonify({'success': False, 'error': 'Cart is empty'})
+        
+        # Get user info
+        supabase_client = get_supabase_client()
+        user_info = supabase_client.get_user_by_phone(phone_number)
+        
+        if not user_info:
+            return jsonify({'success': False, 'error': 'User not found'})
+        
+        # Generate order number
+        import time
+        import random
+        order_number = f"ORD-{int(time.time())}-{random.randint(100, 999)}"
+        
+        # Prepare order data
+        order_data = {
+            'user_id': user_info.get('id'),  # Use user ID from database
+            'order_number': order_number,
+            'status': 'pending',
+            'total_amount': cart_data.get('total_price', 0.0),
+            'currency': 'PHP',
+            'customer_name': user_info.get('full_name') or f"{user_info.get('first_name', '')} {user_info.get('last_name', '')}".strip(),
+            'customer_phone': user_info.get('phone'),
+            'shipping_address': shipping_address,
+            'items': cart_data.get('items', []),
+            'face_photo_front': user_info.get('face_photo_front')
+        }
+        
+        # Create order in database
+        created_order = supabase_client.create_order(order_data)
+        
+        if not created_order:
+            return jsonify({'success': False, 'error': 'Failed to create order'})
+        
+        # Clear cart after successful order creation
+        session['cart'] = {'items': [], 'total_items': 0, 'total_price': 0.0}
+        
+        return jsonify({
+            'success': True,
+            'order_number': order_number,
+            'order_id': created_order.get('id'),
+            'message': f'Order {order_number} created successfully!'
+        })
+        
+    except Exception as e:
+        print(f"Order creation error: {e}")
+        return jsonify({'success': False, 'error': 'Failed to create order'})
+
+@app.route('/orders')
+def orders():
+    """User orders page"""
+    if not is_logged_in():
+        flash('Please log in to view your orders.', 'error')
+        return redirect(url_for('login'))
+    
+    try:
+        phone_number = session.get('phone_number')
+        supabase_client = get_supabase_client()
+        
+        # Get user info first
+        user_info = supabase_client.get_user_by_phone(phone_number)
+        if not user_info:
+            flash('User not found. Please log in again.', 'error')
+            return redirect(url_for('logout'))
+        
+        # Get user orders
+        user_orders = supabase_client.get_user_orders(user_info.get('id'))
+        
+        return render_template('orders.html', 
+                             orders=user_orders,
+                             page_title="My Orders - Marivor")
+    
+    except Exception as e:
+        print(f"Orders page error: {e}")
+        flash('Error loading orders. Please try again.', 'error')
+        return redirect(url_for('home'))
+
 @app.route('/profile')
 def profile():
     """User profile page using Supabase"""

@@ -892,6 +892,64 @@ class SupabaseClient:
         except Exception as e:
             print(f"Error uploading product image: {e}")
             raise e
+    
+    def create_order(self, order_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a new order in the orders table"""
+        try:
+            # Prepare the order data for insertion
+            insert_data = {
+                'user_id': order_data.get('user_id'),
+                'order_number': order_data.get('order_number'),
+                'status': order_data.get('status', 'pending'),
+                'total_amount': order_data.get('total_amount', 0.0),
+                'currency': order_data.get('currency', 'PHP'),
+                'customer_name': order_data.get('customer_name', ''),
+                'customer_phone': order_data.get('customer_phone', ''),
+                'shipping_address': order_data.get('shipping_address', ''),
+                'items': order_data.get('items', []),
+                'face_photo_front': order_data.get('face_photo_front')
+            }
+            
+            # Insert the order
+            response = self.client.table('orders').insert(insert_data).execute()
+            
+            if response.data and len(response.data) > 0:
+                print(f"Order created successfully: {response.data[0]}")
+                return response.data[0]
+            else:
+                print("No data returned from order creation")
+                return None
+                
+        except Exception as e:
+            print(f"Error creating order: {e}")
+            return None
+    
+    def get_user_orders(self, user_id: int) -> List[Dict[str, Any]]:
+        """Get all orders for a specific user"""
+        try:
+            response = self.client.table('orders').select('*').eq('user_id', user_id).order('created_at', desc=True).execute()
+            return response.data if response.data else []
+        except Exception as e:
+            print(f"Error getting user orders: {e}")
+            return []
+    
+    def get_order_by_id(self, order_id: int) -> Dict[str, Any]:
+        """Get a specific order by ID"""
+        try:
+            response = self.client.table('orders').select('*').eq('id', order_id).execute()
+            return response.data[0] if response.data else {}
+        except Exception as e:
+            print(f"Error getting order: {e}")
+            return {}
+    
+    def update_order_status(self, order_id: int, status: str) -> bool:
+        """Update order status"""
+        try:
+            response = self.client.table('orders').update({'status': status}).eq('id', order_id).execute()
+            return len(response.data) > 0
+        except Exception as e:
+            print(f"Error updating order status: {e}")
+            return False
 
 # Global Supabase client instance
 supabase_client = None
