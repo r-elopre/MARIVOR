@@ -77,6 +77,97 @@
                 </div>
                 {% endif %}
 
+                <!-- Order History Card -->
+                {% if user_orders %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-box-seam"></i> Order History</h5>
+                        <small class="text-muted">{{ user_orders|length }} order{% if user_orders|length != 1 %}s{% endif %} found</small>
+                    </div>
+                    <div class="card-body">
+                        {% for order in user_orders %}
+                        <div class="order-card mb-3 p-3 border rounded">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        {% if order.status == 'pending' %}
+                                            <span class="badge bg-warning text-dark">Pending</span>
+                                        {% elif order.status == 'completed' %}
+                                            <span class="badge bg-success">Completed</span>
+                                        {% elif order.status == 'cancelled' %}
+                                            <span class="badge bg-danger">Cancelled</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ order.status|title }}</span>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <div class="order-details">
+                                        {% if order.products_name %}
+                                        <div class="mb-2">
+                                            <strong>Products:</strong> 
+                                            <span class="text-muted">{{ order.products_name }}</span>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        <div class="mb-2">
+                                            <strong>Total:</strong> 
+                                            <span class="text-success fw-bold">₱{{ "%.2f"|format(order.total_amount) }}</span>
+                                        </div>
+                                        
+                                        {% if order.shipping_address %}
+                                        <div class="mb-2">
+                                            <strong>Shipping Address:</strong>
+                                            <small class="text-muted d-block">{{ order.shipping_address }}</small>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        <div class="text-muted small">
+                                            <i class="bi bi-calendar"></i> 
+                                            Ordered on {{ order.created_at.strftime('%B %d, %Y at %I:%M %p') if order.created_at else 'Unknown date' }} (Manila)
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4 text-center">
+                                    {% if order.face_photo_front %}
+                                    <div class="order-face-photo mb-2">
+                                        <img src="{{ order.face_photo_front }}" alt="Order verification photo" 
+                                             class="img-thumbnail" style="width: 80px; height: 80px; object-fit: cover;">
+                                        <small class="d-block text-muted">Verification Photo</small>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if order.seller_store_name %}
+                                    <div class="seller-info">
+                                        <small class="text-muted">
+                                            <i class="bi bi-shop"></i> {{ order.seller_store_name }}
+                                        </small>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% else %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-box-seam"></i> Order History</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <div class="py-5">
+                            <i class="bi bi-bag-x display-4 text-muted mb-3"></i>
+                            <h6 class="text-muted">No orders found</h6>
+                            <p class="text-muted">You haven't placed any orders yet.</p>
+                            <a href="{{ url_for('home') }}" class="btn btn-primary">
+                                <i class="bi bi-shop"></i> Start Shopping
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
                 <!-- Actions Card -->
                 <div class="card">
                     <div class="card-header">
@@ -143,6 +234,53 @@
     background: #f8f9fa;
     padding: 0 10px;
     font-size: 1.5rem;
+}
+
+/* Order Card Styles */
+.order-card {
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    border: 1px solid #e9ecef !important;
+    transition: all 0.3s ease;
+}
+
+.order-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+    border-color: #007bff !important;
+}
+
+.order-face-photo img {
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+}
+
+.order-details {
+    font-size: 0.95rem;
+}
+
+.badge {
+    font-size: 0.8rem;
+    padding: 0.5em 0.8em;
+    font-weight: 500;
+}
+
+.seller-info {
+    background: #f8f9fa;
+    padding: 0.5rem;
+    border-radius: 6px;
+    margin-top: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .order-card .col-md-4 {
+        margin-top: 1rem;
+        text-align: left !important;
+    }
+    
+    .order-face-photo {
+        display: inline-block;
+        margin-right: 1rem;
+    }
 }
 </style>
 

@@ -625,8 +625,39 @@ def profile():
                 # If parsing fails, keep as string and handle in template
                 pass
         
+        # Fetch user orders
+        user_orders = supabase_client.get_user_orders(session['user_id'])
+        
+        # Process order dates for template compatibility and add seller store names
+        from datetime import datetime
+        import pytz
+        
+        # Define Manila timezone
+        manila_tz = pytz.timezone('Asia/Manila')
+        utc_tz = pytz.UTC
+        
+        for order in user_orders:
+            # Convert UTC timestamp to Manila timezone
+            if order.get('created_at') and isinstance(order['created_at'], str):
+                try:
+                    # Parse UTC timestamp
+                    utc_time = datetime.fromisoformat(order['created_at'].replace('Z', '+00:00'))
+                    # Convert to Manila timezone
+                    manila_time = utc_time.replace(tzinfo=utc_tz).astimezone(manila_tz)
+                    order['created_at'] = manila_time
+                except (ValueError, TypeError):
+                    pass
+            
+            # Fetch seller store name if seller_id exists
+            if order.get('seller_id'):
+                seller_info = supabase_client.get_seller_by_id(order['seller_id'])
+                order['seller_store_name'] = seller_info.get('store_name', 'Unknown Store') if seller_info else 'Unknown Store'
+            else:
+                order['seller_store_name'] = 'Marivor Official'
+        
         return render_template('profile.html', 
                              user_info=user_info,
+                             user_orders=user_orders,
                              page_title="My Profile - Marivor")
     
     except Exception as e:
