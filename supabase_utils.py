@@ -221,6 +221,35 @@ class SupabaseClient:
             print(f"Error searching products: {e}")
             return []
     
+    def get_products_by_seller(self, seller_id: int = None) -> List[Dict[str, Any]]:
+        """Get all products from a specific seller (None for Marivor Official)"""
+        try:
+            if seller_id is None:
+                # Get admin products (seller_id is NULL)
+                products_response = self.client.table('products').select('*').is_('seller_id', 'null').execute()
+            else:
+                # Get products from specific seller
+                products_response = self.client.table('products').select('*').eq('seller_id', seller_id).execute()
+            
+            products = products_response.data if products_response.data else []
+            
+            # Add seller store name to each product
+            for product in products:
+                if seller_id is None:
+                    product['seller_store_name'] = 'Marivor Official'
+                else:
+                    # Get seller store name
+                    seller_response = self.client.table('sellers').select('store_name').eq('id', seller_id).execute()
+                    if seller_response.data and len(seller_response.data) > 0:
+                        product['seller_store_name'] = seller_response.data[0]['store_name']
+                    else:
+                        product['seller_store_name'] = 'Unknown Seller'
+                        
+            return products
+        except Exception as e:
+            print(f"Error getting products by seller: {e}")
+            return []
+    
     # Store Review and Rating Methods
     def get_store_details(self, seller_id: int = None, store_name: str = None) -> Dict[str, Any]:
         """Get comprehensive store details including ratings and reviews"""
@@ -233,6 +262,7 @@ class SupabaseClient:
                 return {
                     'store_info': {
                         'id': None,
+                        'seller_id': None,
                         'store_name': 'Marivor Official',
                         'store_image_url': None,
                         'created_at': '2024-01-01',
@@ -253,6 +283,8 @@ class SupabaseClient:
                 return {}
                 
             store_info = store_response.data[0]
+            # Add seller_id to store_info for JavaScript access
+            store_info['seller_id'] = seller_id
             
             # Get store reviews (mock data for now - you can create a reviews table later)
             reviews = [

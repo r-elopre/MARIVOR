@@ -108,6 +108,26 @@ def get_official_store_api():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/store/<int:seller_id>/products')
+def get_store_products_api(seller_id):
+    """API endpoint to get all products from a specific store"""
+    try:
+        supabase_client = get_supabase_client()
+        products = supabase_client.get_products_by_seller(seller_id)
+        return jsonify({'products': products})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/store/official/products')
+def get_official_store_products_api():
+    """API endpoint to get all Marivor Official products"""
+    try:
+        supabase_client = get_supabase_client()
+        products = supabase_client.get_products_by_seller(None)  # None for Marivor Official
+        return jsonify({'products': products})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/cart')
 def cart():
     """Shopping cart page"""
