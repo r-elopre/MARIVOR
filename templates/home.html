@@ -271,6 +271,32 @@
 .store-card:hover::after {
     opacity: 1;
 }
+
+/* Product card hover effects in modal */
+.product-card-clickable:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+}
+
+.product-card-clickable::after {
+    content: 'Click to view in store profile';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(13, 110, 253, 0.9);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-size: 0.6rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.product-card-clickable:hover::after {
+    opacity: 1;
+}
 </style>
 
 <script>
@@ -574,12 +600,14 @@ function renderAllProducts(data, storeName, sellerId) {
                 const badgeColor = product.category === 'Fish' ? 'info' : 'success';
                 
                 const buttonHtml = product.stock > 0 
-                    ? `<button class="btn btn-primary btn-sm" onclick="addToCart(${product.id})"><i class="bi bi-cart-plus"></i></button>`
+                    ? `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); addToCart(${product.id})"><i class="bi bi-cart-plus"></i></button>`
                     : `<button class="btn btn-secondary btn-sm" disabled>Out of Stock</button>`;
                 
                 return `
                 <div class="col-sm-6">
-                    <div class="card h-100">
+                    <div class="card h-100 product-card-clickable" role="button" 
+                         onclick="switchToProductProfile('${product.name}', '${product.category}', '${product.image_url || ''}', ${product.id})"
+                         style="cursor: pointer; transition: transform 0.2s ease;">
                         <div class="card-img-top d-flex align-items-center justify-content-center bg-light" style="height: 120px;">
                             ${imageHtml}
                         </div>
@@ -619,6 +647,30 @@ function goBackToStore(storeName, sellerId) {
     
     // Reload store data
     loadStoreData(storeName, sellerId);
+}
+
+function switchToProductProfile(productName, productCategory, productImageUrl, productId) {
+    // Update current product info with the clicked product
+    window.currentProduct = {
+        id: productId,
+        name: productName,
+        category: productCategory,
+        imageUrl: productImageUrl === 'null' || !productImageUrl ? null : productImageUrl
+    };
+    
+    // Update current product ID
+    currentProductId = productId;
+    
+    // Switch back to store profile using the stored current store
+    if (window.currentStore) {
+        // Reset modal title
+        document.getElementById('storeModalLabel').innerHTML = `
+            <i class="bi bi-shop"></i> Store Profile
+        `;
+        
+        // Reload store data with the new product context
+        loadStoreData(window.currentStore.name, window.currentStore.sellerId);
+    }
 }
 
 function addToCart(productId) {
