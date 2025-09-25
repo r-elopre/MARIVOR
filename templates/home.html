@@ -151,11 +151,11 @@
                                         </div>
                                         
                                         {% if product.stock > 0 %}
-                                            <button class="btn btn-primary btn-sm" onclick="addToCart({{ product.id }})">
+                                            <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); addToCart({{ product.id }}, '{{ product.name|replace("'", "\\'") }}')">
                                                 <i class="bi bi-cart-plus"></i> Add
                                             </button>
                                         {% else %}
-                                            <button class="btn btn-secondary btn-sm" disabled>
+                                            <button class="btn btn-secondary btn-sm" disabled onclick="event.stopPropagation();">
                                                 Out of Stock
                                             </button>
                                         {% endif %}
@@ -495,7 +495,7 @@ function generateStars(rating, small = false) {
 
 function addCurrentProductToCart() {
     if (currentProductId) {
-        addToCart(currentProductId);
+        addToCart(currentProductId, window.currentProduct ? window.currentProduct.name : '');
         // Close modal after adding to cart
         bootstrap.Modal.getInstance(document.getElementById('storeModal')).hide();
     }
@@ -600,7 +600,7 @@ function renderAllProducts(data, storeName, sellerId) {
                 const badgeColor = product.category === 'Fish' ? 'info' : 'success';
                 
                 const buttonHtml = product.stock > 0 
-                    ? `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); addToCart(${product.id})"><i class="bi bi-cart-plus"></i></button>`
+                    ? `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); addToCart(${product.id}, '${product.name.replace(/'/g, "\\'")}')"><i class="bi bi-cart-plus"></i></button>`
                     : `<button class="btn btn-secondary btn-sm" disabled>Out of Stock</button>`;
                 
                 return `
@@ -671,12 +671,6 @@ function switchToProductProfile(productName, productCategory, productImageUrl, p
         // Reload store data with the new product context
         loadStoreData(window.currentStore.name, window.currentStore.sellerId);
     }
-}
-
-function addToCart(productId) {
-    // For now, just show an alert
-    // We'll implement proper cart functionality later
-    alert('Product will be added to cart! (Feature coming soon)');
 }
 
 function updateFilters() {

@@ -28,6 +28,9 @@ def is_logged_in():
 @app.context_processor
 def inject_user():
     """Make user info available in all templates"""
+    cart = session.get('cart', {})
+    cart_count = cart.get('total_items', 0) if isinstance(cart, dict) else 0
+    
     return {
         'is_logged_in': is_logged_in(),
         'user_phone': session.get('phone_number'),
@@ -35,7 +38,7 @@ def inject_user():
         'store_name': session.get('store_name'),
         'is_seller': session.get('user_type') == 'seller',
         'is_admin': session.get('is_admin', False),
-        'cart_count': len(session.get('cart', {}))
+        'cart_count': cart_count
     }
 
 # Routes
@@ -136,12 +139,249 @@ def cart():
         flash('Please log in to view your cart.', 'warning')
         return redirect(url_for('login'))
     
-    # For now, return a simple cart page
-    # We'll implement cart functionality later
-    cart_items = session.get('cart', {})
+    # Get cart from session
+    cart_data = session.get('cart', {'items': [], 'total_items': 0, 'total_price': 0.0})
+    
+    # Make sure cart_data has all required fields
+    if 'items' not in cart_data:
+        cart_data['items'] = []
+    if 'total_items' not in cart_data:
+        cart_data['total_items'] = 0
+    if 'total_price' not in cart_data:
+        cart_data['total_price'] = 0.0
+    
     return render_template('cart.html', 
-                         cart_items=cart_items,
+                         cart_items=cart_data.get('items', []),
+                         cart_total_items=cart_data.get('total_items', 0),
+                         cart_total_price=cart_data.get('total_price', 0.0),
+                         cart_data=cart_data,
                          page_title="Shopping Cart - Marivor")
+
+# Cart API Routes
+@app.route('/api/cart/add', methods=['POST'])
+def api_cart_add():
+    """Add item to cart"""
+    try:
+        if not is_logged_in():
+            return jsonify({'success': False, 'error': 'Please log in to add items to cart'})
+        
+        data = request.get_json()
+        product_id = data.get('product_id')
+        quantity = data.get('quantity', 1)
+        
+        if not product_id:
+            return jsonify({'success': False, 'error': 'Product ID is required'})
+        
+        # Validate product and quantity
+        supabase_client = get_supabase_client()
+        validation = supabase_client.validate_cart_item(product_id, quantity)
+        
+        if not validation['valid']:
+            return jsonify({'success': False, 'error': validation['error']})
+        
+        product = validation['product']
+        
+        # Initialize cart if it doesn't exist
+        if 'cart' not in session:
+            session['cart'] = {'items': [], 'total_items': 0, 'total_price': 0.0}
+        
+        cart = session['cart']
+        
+        # Check if product already exists in cart
+        existing_item = None
+        for item in cart['items']:
+            if item['product_id'] == product_id:
+                existing_item = item
+                break
+        
+        if existing_item:
+            # Update quantity of existing item
+            new_quantity = existing_item['quantity'] + quantity
+            
+            # Re-validate with new quantity
+            validation = supabase_client.validate_cart_item(product_id, new_quantity)
+            if not validation['valid']:
+                return jsonify({'success': False, 'error': validation['error']})
+            
+            existing_item['quantity'] = new_quantity
+        else:
+            # Add new item to cart
+            cart_item = {
+                'product_id': product['id'],
+                'name': product['name'],
+                'price': product['price'],
+                'quantity': quantity,
+                'image_url': product.get('image_url', ''),
+                'category': product.get('category', ''),
+                'seller_name': product.get('seller_store_name', 'Unknown'),
+                'unit': product.get('unit', True),
+                'stock': product.get('stock', 0)
+            }
+            cart['items'].append(cart_item)
+        
+        # Recalculate totals
+        cart['total_items'] = sum(item['quantity'] for item in cart['items'])
+        cart['total_price'] = sum(item['price'] * item['quantity'] for item in cart['items'])
+        
+        # Save to session
+        session['cart'] = cart
+        
+        return jsonify({
+            'success': True, 
+            'message': f'"{product["name"]}" added to cart!',
+            'cart_count': cart['total_items'],
+            'cart_total': cart['total_price']
+        })
+        
+    except Exception as e:
+        print(f"Cart add error: {e}")
+        return jsonify({'success': False, 'error': 'Failed to add item to cart'})
+
+@app.route('/api/cart/update', methods=['POST'])
+def api_cart_update():
+    """Update cart item quantity"""
+    try:
+        if not is_logged_in():
+            return jsonify({'success': False, 'error': 'Please log in to update cart'})
+        
+        data = request.get_json()
+        product_id = data.get('product_id')
+        quantity = data.get('quantity')
+        
+        if not product_id or quantity is None:
+            return jsonify({'success': False, 'error': 'Product ID and quantity are required'})
+        
+        if 'cart' not in session:
+            return jsonify({'success': False, 'error': 'Cart is empty'})
+        
+        cart = session['cart']
+        
+        # Find item in cart
+        item_found = False
+        for item in cart['items']:
+            if item['product_id'] == product_id:
+                if quantity <= 0:
+                    # Remove item if quantity is 0 or less
+                    cart['items'].remove(item)
+                else:
+                    # Validate new quantity
+                    supabase_client = get_supabase_client()
+                    validation = supabase_client.validate_cart_item(product_id, quantity)
+                    
+                    if not validation['valid']:
+                        return jsonify({'success': False, 'error': validation['error']})
+                    
+                    item['quantity'] = quantity
+                
+                item_found = True
+                break
+        
+        if not item_found:
+            return jsonify({'success': False, 'error': 'Item not found in cart'})
+        
+        # Recalculate totals
+        cart['total_items'] = sum(item['quantity'] for item in cart['items'])
+        cart['total_price'] = sum(item['price'] * item['quantity'] for item in cart['items'])
+        
+        # Save to session
+        session['cart'] = cart
+        
+        return jsonify({
+            'success': True,
+            'message': 'Cart updated successfully!',
+            'cart_count': cart['total_items'],
+            'cart_total': cart['total_price']
+        })
+        
+    except Exception as e:
+        print(f"Cart update error: {e}")
+        return jsonify({'success': False, 'error': 'Failed to update cart'})
+
+@app.route('/api/cart/remove', methods=['POST'])
+def api_cart_remove():
+    """Remove item from cart"""
+    try:
+        if not is_logged_in():
+            return jsonify({'success': False, 'error': 'Please log in to modify cart'})
+        
+        data = request.get_json()
+        product_id = data.get('product_id')
+        
+        if not product_id:
+            return jsonify({'success': False, 'error': 'Product ID is required'})
+        
+        if 'cart' not in session:
+            return jsonify({'success': False, 'error': 'Cart is empty'})
+        
+        cart = session['cart']
+        
+        # Find and remove item
+        item_removed = False
+        for item in cart['items']:
+            if item['product_id'] == product_id:
+                cart['items'].remove(item)
+                item_removed = True
+                break
+        
+        if not item_removed:
+            return jsonify({'success': False, 'error': 'Item not found in cart'})
+        
+        # Recalculate totals
+        cart['total_items'] = sum(item['quantity'] for item in cart['items'])
+        cart['total_price'] = sum(item['price'] * item['quantity'] for item in cart['items'])
+        
+        # Save to session
+        session['cart'] = cart
+        
+        return jsonify({
+            'success': True,
+            'message': 'Item removed from cart!',
+            'cart_count': cart['total_items'],
+            'cart_total': cart['total_price']
+        })
+        
+    except Exception as e:
+        print(f"Cart remove error: {e}")
+        return jsonify({'success': False, 'error': 'Failed to remove item'})
+
+@app.route('/api/cart/clear', methods=['POST'])
+def api_cart_clear():
+    """Clear entire cart"""
+    try:
+        if not is_logged_in():
+            return jsonify({'success': False, 'error': 'Please log in to clear cart'})
+        
+        # Clear cart
+        session['cart'] = {'items': [], 'total_items': 0, 'total_price': 0.0}
+        
+        return jsonify({
+            'success': True,
+            'message': 'Cart cleared successfully!',
+            'cart_count': 0,
+            'cart_total': 0.0
+        })
+        
+    except Exception as e:
+        print(f"Cart clear error: {e}")
+        return jsonify({'success': False, 'error': 'Failed to clear cart'})
+
+@app.route('/api/cart/get', methods=['GET'])
+def api_cart_get():
+    """Get current cart data"""
+    try:
+        if not is_logged_in():
+            return jsonify({'success': False, 'error': 'Please log in to view cart'})
+        
+        cart_data = session.get('cart', {'items': [], 'total_items': 0, 'total_price': 0.0})
+        
+        return jsonify({
+            'success': True,
+            'cart': cart_data
+        })
+        
+    except Exception as e:
+        print(f"Cart get error: {e}")
+        return jsonify({'success': False, 'error': 'Failed to get cart data'})
 
 @app.route('/profile')
 def profile():

@@ -543,6 +543,52 @@ class SupabaseClient:
             print(f"Error getting product by ID: {e}")
             return None
     
+    def get_product_for_cart(self, product_id: int) -> Optional[Dict[str, Any]]:
+        """Get product information specifically formatted for cart operations"""
+        try:
+            product = self.get_product_by_id(product_id)
+            if not product:
+                return None
+                
+            # Add seller information
+            if product.get('seller_id') and product['seller_id'] is not None:
+                # Get seller store name
+                seller_response = self.client.table('sellers').select('store_name').eq('id', product['seller_id']).execute()
+                if seller_response.data and len(seller_response.data) > 0:
+                    product['seller_store_name'] = seller_response.data[0]['store_name']
+                else:
+                    product['seller_store_name'] = 'Unknown Seller'
+            else:
+                product['seller_store_name'] = 'Marivor Official'
+                
+            return product
+        except Exception as e:
+            print(f"Error getting product for cart: {e}")
+            return None
+    
+    def validate_cart_item(self, product_id: int, quantity: int) -> Dict[str, Any]:
+        """Validate cart item before adding/updating"""
+        try:
+            # Validate quantity
+            if quantity < 1:
+                return {'valid': False, 'error': 'Quantity must be at least 1'}
+            if quantity > 99:
+                return {'valid': False, 'error': 'Maximum quantity per item is 99'}
+            
+            # Get product
+            product = self.get_product_for_cart(product_id)
+            if not product:
+                return {'valid': False, 'error': 'Product not found'}
+            
+            # Check stock
+            if product.get('stock', 0) < quantity:
+                return {'valid': False, 'error': f'Only {product.get("stock", 0)} items available in stock'}
+            
+            return {'valid': True, 'product': product}
+            
+        except Exception as e:
+            return {'valid': False, 'error': f'Validation error: {str(e)}'}
+    
     # Order Management Methods
     def create_order(self, user_id: int, items: List[Dict], total_price: float) -> Dict[str, Any]:
         """Create a new order"""

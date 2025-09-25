@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Cart functionality (placeholder for now)
+// Cart functionality - Enhanced version
 function addToCart(productId, productName = '') {
     // Show loading state
     const button = event.target.closest('button');
@@ -21,18 +21,94 @@ function addToCart(productId, productName = '') {
     button.innerHTML = '<i class="bi bi-hourglass-split"></i> Adding...';
     button.disabled = true;
     
-    // Simulate API call delay
-    setTimeout(() => {
+    // Make API call to add item to cart
+    fetch('/api/cart/add', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            product_id: productId,
+            quantity: 1
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
         // Reset button
         button.innerHTML = originalHTML;
         button.disabled = false;
         
-        // Show success message
-        showNotification(`"${productName}" added to cart!`, 'success');
+        if (data.success) {
+            // Update cart count in navigation
+            updateCartBadge(data.cart_count);
+            
+            // Show success message
+            showNotification(data.message || `"${productName}" added to cart!`, 'success');
+            
+            // Briefly change button text to show success
+            const successHTML = '<i class="bi bi-check2"></i> Added!';
+            button.innerHTML = successHTML;
+            button.classList.add('btn-success');
+            button.classList.remove('btn-primary');
+            
+            setTimeout(() => {
+                button.innerHTML = originalHTML;
+                button.classList.remove('btn-success');
+                button.classList.add('btn-primary');
+            }, 2000);
+        } else {
+            showNotification(data.error || 'Failed to add item to cart', 'danger');
+        }
+    })
+    .catch(error => {
+        // Reset button
+        button.innerHTML = originalHTML;
+        button.disabled = false;
         
-        // In the future, this will make an actual API call
-        console.log(`Adding product ${productId} to cart`);
-    }, 1000);
+        console.error('Error:', error);
+        showNotification('Failed to add item to cart', 'danger');
+    });
+}
+
+// Update cart badge in navigation
+function updateCartBadge(cartCount) {
+    // Update desktop cart badge
+    const desktopBadge = document.querySelector('.navbar-nav .badge');
+    if (desktopBadge) {
+        if (cartCount > 0) {
+            desktopBadge.textContent = cartCount;
+            desktopBadge.style.display = 'inline';
+        } else {
+            desktopBadge.style.display = 'none';
+        }
+    }
+    
+    // Update mobile cart badge
+    const mobileBadge = document.querySelector('.cart-badge');
+    if (mobileBadge) {
+        if (cartCount > 0) {
+            mobileBadge.textContent = cartCount;
+            mobileBadge.style.display = 'flex';
+        } else {
+            mobileBadge.style.display = 'none';
+        }
+    }
+}
+
+// Get current cart data
+function getCartData() {
+    return fetch('/api/cart/get')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                return data.cart;
+            }
+            throw new Error(data.error || 'Failed to get cart data');
+        })
+        .catch(error => {
+            console.error('Error getting cart data:', error);
+            return { items: [], total_items: 0, total_price: 0.0 };
+        });
 }
 
 // Notification system
