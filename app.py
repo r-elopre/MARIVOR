@@ -489,6 +489,86 @@ def api_order_create():
         print(f"Order creation error: {e}")
         return jsonify({'success': False, 'error': 'Failed to create order'})
 
+@app.route('/api/order/create-by-seller', methods=['POST'])
+def api_order_create_by_seller():
+    """Create a new order for a specific seller"""
+    try:
+        if not is_logged_in():
+            return jsonify({'success': False, 'error': 'Please log in first'})
+        
+        phone_number = session.get('phone_number')
+        if not phone_number:
+            return jsonify({'success': False, 'error': 'User session invalid'})
+        
+        # Get request data
+        data = request.get_json()
+        shipping_address = data.get('shipping_address', '').strip()
+        seller_items = data.get('seller_items', [])
+        seller_name = data.get('seller_name', '')
+        total_amount = data.get('total_amount', 0.0)
+        
+        if not shipping_address:
+            return jsonify({'success': False, 'error': 'Shipping address is required'})
+        
+        if not seller_items:
+            return jsonify({'success': False, 'error': 'No items for this seller'})
+        
+        # Get user info
+        supabase_client = get_supabase_client()
+        user_info = supabase_client.get_user_by_phone(phone_number)
+        
+        if not user_info:
+            return jsonify({'success': False, 'error': 'User not found'})
+        
+        # Get seller_id from the first product
+        seller_id = None
+        if seller_items and len(seller_items) > 0:
+            product_id = seller_items[0].get('product_id')
+            if product_id:
+                product = supabase_client.get_product_by_id(product_id)
+                if product:
+                    seller_id = product.get('seller_id')
+        
+        # Generate order number
+        import time
+        import random
+        order_number = f"ORD-{int(time.time())}-{random.randint(100, 999)}"
+        
+        # Prepare order data for single seller
+        order_data = {
+            'user_id': user_info.get('id'),
+            'seller_id': seller_id,
+            'order_number': order_number,
+            'status': 'pending',
+            'total_amount': total_amount,
+            'currency': 'PHP',
+            'customer_name': user_info.get('full_name') or f"{user_info.get('first_name', '')} {user_info.get('last_name', '')}".strip(),
+            'customer_phone': user_info.get('phone'),
+            'shipping_address': shipping_address,
+            'items': seller_items,
+            'face_photo_front': user_info.get('face_photo_front')
+        }
+        
+        # Create order in database
+        created_order = supabase_client.create_single_seller_order(order_data)
+        
+        if not created_order:
+            return jsonify({'success': False, 'error': f'Failed to create order for {seller_name}'})
+        
+        # Only clear cart items for this seller (we'll handle this on frontend after all orders complete)
+        
+        return jsonify({
+            'success': True,
+            'order_number': order_number,
+            'order_id': created_order.get('id'),
+            'seller_name': seller_name,
+            'message': f'Order {order_number} created successfully for {seller_name}!'
+        })
+        
+    except Exception as e:
+        print(f"Seller order creation error: {e}")
+        return jsonify({'success': False, 'error': f'Failed to create order: {str(e)}'})
+
 @app.route('/orders')
 def orders():
     """User orders page"""

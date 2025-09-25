@@ -896,9 +896,43 @@ class SupabaseClient:
     def create_order(self, order_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create a new order in the orders table"""
         try:
+            # Get cart items to determine seller info
+            cart_items = order_data.get('items', [])
+            
+            # Extract product names and IDs
+            product_names = []
+            product_ids = []
+            
+            for item in cart_items:
+                if item.get('name'):
+                    product_names.append(item.get('name'))
+                if item.get('product_id'):
+                    product_ids.append(str(item.get('product_id')))
+            
+            # Join them as comma-separated strings
+            products_name = ', '.join(product_names) if product_names else ''
+            products_id = ', '.join(product_ids) if product_ids else ''
+            
+            # Determine primary seller_id (first seller or most items)
+            seller_id = None
+            if cart_items:
+                # For now, use the seller_id from the first item
+                # You could implement logic to use the seller with most items/value
+                seller_id = cart_items[0].get('seller_id')
+                
+                # Add seller info to each item for better tracking
+                for item in cart_items:
+                    if 'seller_id' not in item:
+                        # If seller_id missing, try to get it from product
+                        product = self.get_product_by_id(item.get('product_id'))
+                        if product:
+                            item['seller_id'] = product.get('seller_id')
+                            item['seller_name'] = product.get('seller_name', 'Unknown Seller')
+            
             # Prepare the order data for insertion
             insert_data = {
                 'user_id': order_data.get('user_id'),
+                'seller_id': seller_id,  # Add seller_id to orders table
                 'order_number': order_data.get('order_number'),
                 'status': order_data.get('status', 'pending'),
                 'total_amount': order_data.get('total_amount', 0.0),
@@ -906,15 +940,19 @@ class SupabaseClient:
                 'customer_name': order_data.get('customer_name', ''),
                 'customer_phone': order_data.get('customer_phone', ''),
                 'shipping_address': order_data.get('shipping_address', ''),
-                'items': order_data.get('items', []),
-                'face_photo_front': order_data.get('face_photo_front')
+                'items': cart_items,  # Use enhanced cart items with seller info
+                'face_photo_front': order_data.get('face_photo_front'),
+                'products_name': products_name,  # New column
+                'products_id': products_id       # New column
             }
             
             # Insert the order
             response = self.client.table('orders').insert(insert_data).execute()
             
             if response.data and len(response.data) > 0:
-                print(f"Order created successfully: {response.data[0]}")
+                print(f"Order created successfully with seller_id {seller_id}")
+                print(f"Products: {products_name}")
+                print(f"Product IDs: {products_id}")
                 return response.data[0]
             else:
                 print("No data returned from order creation")
@@ -924,6 +962,59 @@ class SupabaseClient:
             print(f"Error creating order: {e}")
             return None
     
+    def create_single_seller_order(self, order_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a single-seller order (simplified version)"""
+        try:
+            # Get cart items to extract product names and IDs
+            cart_items = order_data.get('items', [])
+            
+            # Extract product names and IDs
+            product_names = []
+            product_ids = []
+            
+            for item in cart_items:
+                if item.get('name'):
+                    product_names.append(item.get('name'))
+                if item.get('product_id'):
+                    product_ids.append(str(item.get('product_id')))
+            
+            # Join them as comma-separated strings
+            products_name = ', '.join(product_names) if product_names else ''
+            products_id = ', '.join(product_ids) if product_ids else ''
+            
+            # Prepare the order data for insertion
+            insert_data = {
+                'user_id': order_data.get('user_id'),
+                'seller_id': order_data.get('seller_id'),
+                'order_number': order_data.get('order_number'),
+                'status': order_data.get('status', 'pending'),
+                'total_amount': order_data.get('total_amount', 0.0),
+                'currency': order_data.get('currency', 'PHP'),
+                'customer_name': order_data.get('customer_name', ''),
+                'customer_phone': order_data.get('customer_phone', ''),
+                'shipping_address': order_data.get('shipping_address', ''),
+                'items': cart_items,
+                'face_photo_front': order_data.get('face_photo_front'),
+                'products_name': products_name,  # New column
+                'products_id': products_id       # New column
+            }
+            
+            # Insert the order
+            response = self.client.table('orders').insert(insert_data).execute()
+            
+            if response.data and len(response.data) > 0:
+                print(f"Single seller order created successfully with products: {products_name}")
+                print(f"Product IDs: {products_id}")
+                print(f"Full order data: {response.data[0]}")
+                return response.data[0]
+            else:
+                print("No data returned from single seller order creation")
+                return None
+                
+        except Exception as e:
+            print(f"Error creating single seller order: {e}")
+            return None
+    
     def get_user_orders(self, user_id: int) -> List[Dict[str, Any]]:
         """Get all orders for a specific user"""
         try:
@@ -931,6 +1022,15 @@ class SupabaseClient:
             return response.data if response.data else []
         except Exception as e:
             print(f"Error getting user orders: {e}")
+            return []
+    
+    def get_seller_orders(self, seller_id: int) -> List[Dict[str, Any]]:
+        """Get all orders for a specific seller"""
+        try:
+            response = self.client.table('orders').select('*').eq('seller_id', seller_id).order('created_at', desc=True).execute()
+            return response.data if response.data else []
+        except Exception as e:
+            print(f"Error getting seller orders: {e}")
             return []
     
     def get_order_by_id(self, order_id: int) -> Dict[str, Any]:

@@ -284,27 +284,13 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <!-- Customer Info Section -->
+                <!-- User Face Photo Section -->
                 <div class="row mb-4">
-                    <div class="col-md-8">
+                    <div class="col-12 text-center">
                         <h6 class="fw-bold text-primary mb-3">
-                            <i class="bi bi-person-circle me-2"></i>Customer Information
+                            <i class="bi bi-person-circle me-2"></i>Customer Face Photo
                         </h6>
-                        <div class="row">
-                            <div class="col-sm-6 mb-2">
-                                <strong>Name:</strong> <span id="checkoutCustomerName">-</span>
-                            </div>
-                            <div class="col-sm-6 mb-2">
-                                <strong>Email:</strong> <span id="checkoutCustomerEmail">-</span>
-                            </div>
-                            <div class="col-sm-6 mb-2">
-                                <strong>Phone:</strong> <span id="checkoutCustomerPhone">-</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4 text-center">
-                        <h6 class="fw-bold text-primary mb-2">Profile Photo</h6>
-                        <div id="checkoutFacePhoto" class="border rounded p-2" style="min-height: 120px;">
+                        <div id="checkoutFacePhoto" class="d-inline-block border rounded p-2" style="min-height: 120px;">
                             <div class="text-muted">
                                 <i class="bi bi-person-circle" style="font-size: 4rem;"></i>
                                 <p class="small mb-0">No photo available</p>
@@ -684,10 +670,19 @@ function proceedToCheckout() {
     
     // Get user details and populate checkout modal
     fetch('/api/user/details')
-    .then(response => response.json())
+    .then(response => {
+        console.log('User details response status:', response.status);
+        return response.json();
+    })
     .then(userData => {
+        console.log('User details response data:', userData);
+        
         if (!userData.success) {
             throw new Error(userData.error || 'Failed to get user details');
+        }
+        
+        if (!userData.user) {
+            throw new Error('No user data received');
         }
         
         populateCheckoutModal(userData.user, shippingData);
@@ -699,84 +694,114 @@ function proceedToCheckout() {
     })
     .catch(error => {
         hideLoading();
-        console.error('Error:', error);
-        showNotification('Failed to load checkout details', 'danger');
+        console.error('Checkout details error:', error);
+        showNotification('Failed to load checkout details: ' + error.message, 'danger');
     });
 }
 
 function populateCheckoutModal(user, shippingData) {
-    // Populate customer info
-    document.getElementById('checkoutCustomerName').textContent = user.full_name || user.first_name + ' ' + user.last_name || 'N/A';
-    document.getElementById('checkoutCustomerEmail').textContent = user.email || 'N/A';
-    document.getElementById('checkoutCustomerPhone').textContent = user.phone || 'N/A';
-    
-    // Populate face photo
-    const facePhotoContainer = document.getElementById('checkoutFacePhoto');
-    if (user.face_photo_front) {
-        facePhotoContainer.innerHTML = `
-            <img src="${user.face_photo_front}" alt="Profile Photo" 
-                 class="img-fluid rounded border" style="max-height: 120px; max-width: 120px; object-fit: cover;">
-        `;
-    } else {
-        facePhotoContainer.innerHTML = `
-            <div class="text-muted">
-                <i class="bi bi-person-circle" style="font-size: 4rem;"></i>
-                <p class="small mb-0">No photo available</p>
-            </div>
-        `;
+    try {
+        console.log('Populating modal with user data:', user);
+        
+        // Populate face photo (only customer info we need)
+        const facePhotoContainer = document.getElementById('checkoutFacePhoto');
+        if (user.face_photo_front) {
+            facePhotoContainer.innerHTML = `
+                <img src="${user.face_photo_front}" alt="Profile Photo" 
+                     class="img-fluid rounded border" style="max-height: 120px; max-width: 120px; object-fit: cover;">
+            `;
+        } else {
+            facePhotoContainer.innerHTML = `
+                <div class="text-muted">
+                    <i class="bi bi-person-circle" style="font-size: 4rem;"></i>
+                    <p class="small mb-0">No photo available</p>
+                </div>
+            `;
+        }
+        
+        // Populate shipping address
+        document.getElementById('checkoutShippingAddress').textContent = shippingData.fullAddress;
+        
+        // Populate cart items (get from current page)
+        populateCheckoutItems();
+        
+        // Populate totals
+        const totalItems = parseInt('{{ cart_total_items }}') || 0;
+        const totalAmount = parseFloat('{{ cart_total_price }}') || 0.0;
+        
+        document.getElementById('checkoutTotalItems').textContent = totalItems;
+        document.getElementById('checkoutTotalAmount').textContent = totalAmount.toFixed(2);
+        document.getElementById('checkoutFinalTotal').textContent = totalAmount.toFixed(2);
+        
+        console.log('Modal population completed successfully');
+    } catch (error) {
+        console.error('Error populating checkout modal:', error);
+        throw new Error('Failed to populate checkout details');
     }
-    
-    // Populate shipping address
-    document.getElementById('checkoutShippingAddress').textContent = shippingData.fullAddress;
-    
-    // Populate cart items (get from current page)
-    populateCheckoutItems();
-    
-    // Populate totals
-    const totalItems = parseInt('{{ cart_total_items }}') || 0;
-    const totalAmount = parseFloat('{{ cart_total_price }}') || 0.0;
-    
-    document.getElementById('checkoutTotalItems').textContent = totalItems;
-    document.getElementById('checkoutTotalAmount').textContent = totalAmount.toFixed(2);
-    document.getElementById('checkoutFinalTotal').textContent = totalAmount.toFixed(2);
 }
 
 function populateCheckoutItems() {
-    const checkoutItemsContainer = document.getElementById('checkoutItems');
-    const cartItems = document.querySelectorAll('.cart-item');
-    
-    let itemsHtml = '';
-    
-    cartItems.forEach(item => {
-        const productId = item.dataset.productId;
-        const name = item.querySelector('h6').textContent.trim();
-        const seller = item.querySelector('.text-muted.small').textContent.replace('🏪 ', '').trim();
-        const price = item.querySelector('.fw-bold.text-primary').textContent.trim();
-        const quantity = item.querySelector('.quantity-input, input[type="number"]').value;
-        const image = item.querySelector('img');
+    try {
+        const checkoutItemsContainer = document.getElementById('checkoutItems');
+        const cartItems = document.querySelectorAll('.cart-item');
         
-        itemsHtml += `
-            <div class="d-flex align-items-center p-3 border-bottom">
-                <div class="flex-shrink-0 me-3">
-                    ${image ? 
-                        `<img src="${image.src}" alt="${name}" class="rounded" style="width: 50px; height: 50px; object-fit: cover;">` :
-                        `<div class="bg-light rounded d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
-                            <span style="font-size: 1.5rem;">🐟</span>
-                        </div>`
-                    }
-                </div>
-                <div class="flex-grow-1">
-                    <h6 class="mb-1">${name}</h6>
-                    <small class="text-muted">${seller}</small>
-                    <div class="mt-1">
-                        <span class="fw-bold">${price}</span> × ${quantity}
+        console.log('Found cart items:', cartItems.length);
+        
+        let itemsHtml = '';
+        
+        cartItems.forEach((item, index) => {
+            try {
+                const productId = item.dataset.productId;
+                const nameElement = item.querySelector('h6');
+                const sellerElement = item.querySelector('.text-muted.small');
+                const priceElement = item.querySelector('.fw-bold.text-primary');
+                const quantityElement = item.querySelector('.quantity-input, input[type="number"]');
+                const image = item.querySelector('img');
+                
+                if (!nameElement || !sellerElement || !priceElement || !quantityElement) {
+                    console.warn(`Skipping cart item ${index}: missing required elements`);
+                    return;
+                }
+                
+                const name = nameElement.textContent.trim();
+                const seller = sellerElement.textContent.replace('🏪 ', '').trim();
+                const price = priceElement.textContent.trim();
+                const quantity = quantityElement.value;
+                
+                itemsHtml += `
+                    <div class="d-flex align-items-center p-3 border-bottom">
+                        <div class="flex-shrink-0 me-3">
+                            ${image ? 
+                                `<img src="${image.src}" alt="${name}" class="rounded" style="width: 50px; height: 50px; object-fit: cover;">` :
+                                `<div class="bg-light rounded d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                    <span style="font-size: 1.5rem;">🐟</span>
+                                </div>`
+                            }
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">${name}</h6>
+                            <small class="text-muted">${seller}</small>
+                            <div class="mt-1">
+                                <span class="fw-bold">${price}</span> × ${quantity}
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
-        `;
-    });
-    
-    checkoutItemsContainer.innerHTML = itemsHtml || '<p class="text-muted p-3 mb-0">No items found</p>';
+                `;
+            } catch (itemError) {
+                console.error(`Error processing cart item ${index}:`, itemError);
+            }
+        });
+        
+        checkoutItemsContainer.innerHTML = itemsHtml || '<p class="text-muted p-3 mb-0">No items found</p>';
+        console.log('Checkout items populated successfully');
+    } catch (error) {
+        console.error('Error populating checkout items:', error);
+        const checkoutItemsContainer = document.getElementById('checkoutItems');
+        if (checkoutItemsContainer) {
+            checkoutItemsContainer.innerHTML = '<p class="text-danger p-3 mb-0">Error loading cart items</p>';
+        }
+        throw new Error('Failed to load cart items for checkout');
+    }
 }
 
 function confirmOrder() {
@@ -790,46 +815,157 @@ function confirmOrder() {
     // Get shipping address
     const shippingAddress = JSON.parse(sessionStorage.getItem('shippingAddress'));
     
-    // Prepare order data
-    const orderData = {
-        shipping_address: shippingAddress.fullAddress
-    };
+    // Group cart items by seller
+    const cartItems = Array.from(document.querySelectorAll('.cart-item'));
+    const sellerGroups = {};
     
-    // Submit order
-    fetch('/api/order/create', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(orderData)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Hide checkout modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal'));
-            modal.hide();
-            
-            // Show success message
-            showNotification(`Order #${data.order_number} created successfully! 🎉`, 'success');
-            
-            // Clear cart and redirect to home
-            setTimeout(() => {
-                window.location.href = '/';
-            }, 2000);
-        } else {
-            throw new Error(data.error || 'Failed to create order');
+    cartItems.forEach(item => {
+        const productId = item.dataset.productId;
+        const name = item.querySelector('h6').textContent.trim();
+        const seller = item.querySelector('.text-muted.small').textContent.replace('🏪 ', '').trim();
+        const priceText = item.querySelector('.fw-bold.text-primary').textContent.trim();
+        const price = parseFloat(priceText.replace('₱', ''));
+        const quantity = parseInt(item.querySelector('.quantity-input, input[type="number"]').value);
+        
+        // Create seller group key (use seller name for now)
+        const sellerKey = seller;
+        
+        if (!sellerGroups[sellerKey]) {
+            sellerGroups[sellerKey] = {
+                seller_name: seller,
+                items: [],
+                total_amount: 0
+            };
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showNotification('Failed to create order: ' + error.message, 'danger');
-    })
-    .finally(() => {
+        
+        const itemData = {
+            product_id: parseInt(productId),
+            name: name,
+            seller_name: seller,
+            price: price,
+            quantity: quantity,
+            total_price: price * quantity
+        };
+        
+        sellerGroups[sellerKey].items.push(itemData);
+        sellerGroups[sellerKey].total_amount += itemData.total_price;
+    });
+    
+    // Create separate orders for each seller
+    const sellerNames = Object.keys(sellerGroups);
+    const totalOrders = sellerNames.length;
+    
+    if (totalOrders > 1) {
+        // Show confirmation for multiple orders
+        if (!confirm(`Your cart contains items from ${totalOrders} different sellers. This will create ${totalOrders} separate orders. Continue?`)) {
+            // Re-enable button
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = originalText;
+            return;
+        }
+    }
+    
+    // Create orders for each seller
+    let completedOrders = 0;
+    let failedOrders = 0;
+    const orderResults = [];
+    
+    sellerNames.forEach((sellerName, index) => {
+        const sellerGroup = sellerGroups[sellerName];
+        
+        const orderData = {
+            shipping_address: shippingAddress.fullAddress,
+            seller_items: sellerGroup.items,
+            seller_name: sellerName,
+            total_amount: sellerGroup.total_amount
+        };
+        
+        // Create order for this seller
+        fetch('/api/order/create-by-seller', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(orderData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            completedOrders++;
+            
+            if (data.success) {
+                orderResults.push({
+                    success: true,
+                    seller: sellerName,
+                    order_number: data.order_number
+                });
+            } else {
+                failedOrders++;
+                orderResults.push({
+                    success: false,
+                    seller: sellerName,
+                    error: data.error
+                });
+            }
+            
+            // Check if all orders are processed
+            if (completedOrders + failedOrders === totalOrders) {
+                processOrderResults(orderResults, totalOrders, failedOrders);
+            }
+        })
+        .catch(error => {
+            completedOrders++;
+            failedOrders++;
+            orderResults.push({
+                success: false,
+                seller: sellerName,
+                error: error.message
+            });
+            
+            // Check if all orders are processed
+            if (completedOrders === totalOrders) {
+                processOrderResults(orderResults, totalOrders, failedOrders);
+            }
+        });
+    });
+    
+    function processOrderResults(results, total, failed) {
+        // Hide checkout modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal'));
+        modal.hide();
+        
         // Re-enable button
         confirmBtn.disabled = false;
         confirmBtn.innerHTML = originalText;
-    });
+        
+        if (failed === 0) {
+            // All orders successful - clear cart
+            fetch('/api/cart/clear', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            }).then(() => {
+                const successOrders = results.filter(r => r.success).map(r => r.order_number).join(', ');
+                showNotification(`🎉 ${total} orders created successfully! Order numbers: ${successOrders}`, 'success');
+                
+                // Clear cart and redirect to home
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 3000);
+            });
+        } else if (failed < total) {
+            // Some orders failed
+            const successCount = total - failed;
+            showNotification(`⚠️ ${successCount} orders created, ${failed} failed. Please check your orders.`, 'warning');
+            
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 3000);
+        } else {
+            // All orders failed
+            showNotification('❌ All orders failed to create. Please try again.', 'danger');
+        }
+    }
 }
 
 // Function to build and display full address
