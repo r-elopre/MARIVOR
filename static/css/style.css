@@ -184,6 +184,41 @@ footer {
     line-height: 1.2;
 }
 
+/* Orders Mobile Card Styles */
+.min-w-0 {
+    min-width: 0;
+}
+
+/* Mobile Order Cards */
+@media (max-width: 991px) {
+    .card {
+        border-radius: 0.5rem;
+        border: 1px solid #e9ecef;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+    
+    /* Compact image display */
+    .rounded-circle {
+        border: 2px solid #fff;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    /* Status badges for mobile */
+    .badge {
+        font-size: 0.7rem;
+        padding: 0.35em 0.65em;
+    }
+    
+    /* Dropdown for mobile */
+    .btn-group-sm .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+}
+
 /* Responsive adjustments for stat cards */
 @media (max-width: 576px) {
     .stat-card {
@@ -192,6 +227,16 @@ footer {
     
     .stat-number {
         font-size: 1.5rem;
+    }
+    
+    /* Tighter spacing on very small screens */
+    .card-body {
+        padding: 0.75rem;
+    }
+    
+    .g-3 > * {
+        padding-right: 0.5rem;
+        padding-left: 0.5rem;
     }
 }
 

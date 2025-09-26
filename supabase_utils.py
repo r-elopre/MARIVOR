@@ -1042,6 +1042,15 @@ class SupabaseClient:
             print(f"Error getting order: {e}")
             return {}
     
+    def get_product_by_id(self, product_id: int) -> Dict[str, Any]:
+        """Get a specific product by ID"""
+        try:
+            response = self.client.table('products').select('*').eq('id', product_id).execute()
+            return response.data[0] if response.data else {}
+        except Exception as e:
+            print(f"Error getting product: {e}")
+            return {}
+    
     def update_order_status(self, order_id: int, status: str) -> bool:
         """Update order status"""
         try:

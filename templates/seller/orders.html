@@ -70,7 +70,8 @@
 <div class="tab-content" id="orderTabsContent">
     <!-- All Orders Tab -->
     <div class="tab-pane fade show active" id="all" role="tabpanel">
-        <div class="seller-table">
+        <!-- Desktop Table View -->
+        <div class="seller-table d-none d-lg-block">
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
@@ -82,7 +83,6 @@
                             <th>Total</th>
                             <th>Status</th>
                             <th>Date</th>
-                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -91,31 +91,46 @@
                             <tr>
                                 <td>
                                     <strong>#{{ order.id }}</strong>
+                                    <br><small class="text-muted">{{ order.order_number or order.id }}</small>
                                 </td>
                                 <td>
                                     <div class="d-flex align-items-center">
                                         <div class="me-2">
-                                            <i class="bi bi-person-circle fs-4 text-muted"></i>
+                                            {% if order.face_photo_front %}
+                                                <img src="{{ order.face_photo_front }}" alt="Customer" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">
+                                            {% else %}
+                                                <i class="bi bi-person-circle fs-4 text-muted"></i>
+                                            {% endif %}
                                         </div>
                                         <div>
                                             <div class="fw-bold">{{ order.customer_name or 'Anonymous' }}</div>
-                                            <small class="text-muted">{{ order.customer_email or 'No email' }}</small>
+                                            <small class="text-muted">{{ order.customer_phone or 'No phone' }}</small>
                                         </div>
                                     </div>
                                 </td>
                                 <td>
                                     <div class="d-flex align-items-center">
-                                        {% if order.product_image %}
-                                            <img src="{{ order.product_image }}" alt="Product" class="rounded me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                                        {% if order.first_product_image %}
+                                            <img src="{{ order.first_product_image }}" alt="Product" class="rounded me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                                        {% else %}
+                                            <div class="bg-light rounded d-flex align-items-center justify-content-center me-2" style="width: 40px; height: 40px;">
+                                                <i class="bi bi-image text-muted"></i>
+                                            </div>
                                         {% endif %}
                                         <div>
-                                            <div class="fw-bold">{{ order.product_name }}</div>
-                                            <small class="text-muted">{{ order.product_category or 'No category' }}</small>
+                                            <div class="fw-bold">{{ order.first_product_name or 'Unknown Product' }}</div>
+                                            <small class="text-muted">
+                                                {% if order.item_count > 1 %}
+                                                    +{{ order.item_count - 1 }} more items
+                                                {% else %}
+                                                    Single item
+                                                {% endif %}
+                                            </small>
                                         </div>
                                     </div>
                                 </td>
-                                <td class="fw-bold">{{ order.quantity }}</td>
-                                <td class="fw-bold">₱{{ "%.2f"|format(order.total_amount) }}</td>
+                                <td class="fw-bold">{{ order.item_count or 1 }}</td>
+                                <td class="fw-bold">{{ order.total_amount_formatted or "₱0.00" }}</td>
                                 <td>
                                     {% if order.status == 'pending' %}
                                         <span class="badge bg-warning">Pending</span>
@@ -128,36 +143,11 @@
                                     {% elif order.status == 'cancelled' %}
                                         <span class="badge bg-danger">Cancelled</span>
                                     {% else %}
-                                        <span class="badge bg-secondary">{{ order.status.title() }}</span>
+                                        <span class="badge bg-secondary">{{ order.status or 'Unknown' }}</span>
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <div>{{ order.created_at.strftime('%m/%d/%Y') if order.created_at else 'Recent' }}</div>
-                                    <small class="text-muted">{{ order.created_at.strftime('%I:%M %p') if order.created_at else '' }}</small>
-                                </td>
-                                <td>
-                                    <div class="btn-group btn-group-sm" role="group">
-                                        <button type="button" class="btn btn-outline-primary view-order-btn" 
-                                                data-order-id="{{ order.id }}" title="View Details">
-                                            <i class="bi bi-eye"></i>
-                                        </button>
-                                        {% if order.status == 'pending' %}
-                                            <button type="button" class="btn btn-outline-success update-status-btn" 
-                                                    data-order-id="{{ order.id }}" data-new-status="processing" title="Start Processing">
-                                                <i class="bi bi-play"></i>
-                                            </button>
-                                        {% elif order.status == 'processing' %}
-                                            <button type="button" class="btn btn-outline-info update-status-btn" 
-                                                    data-order-id="{{ order.id }}" data-new-status="shipped" title="Mark as Shipped">
-                                                <i class="bi bi-truck"></i>
-                                            </button>
-                                        {% elif order.status == 'shipped' %}
-                                            <button type="button" class="btn btn-outline-success update-status-btn" 
-                                                    data-order-id="{{ order.id }}" data-new-status="completed" title="Mark as Completed">
-                                                <i class="bi bi-check"></i>
-                                            </button>
-                                        {% endif %}
-                                    </div>
+                                    <small class="text-muted">{{ order.created_at_manila or order.created_at }}</small>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -178,6 +168,100 @@
                     </tbody>
                 </table>
             </div>
+        </div>
+
+        <!-- Mobile Card View -->
+        <div class="d-block d-lg-none">
+            {% if orders %}
+                {% for order in orders %}
+                <div class="card mb-3 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div>
+                                <h6 class="mb-1">Order #{{ order.id }}</h6>
+                                <small class="text-muted">{{ order.order_number or order.id }}</small>
+                            </div>
+                            <div class="text-end">
+                                {% if order.status == 'pending' %}
+                                    <span class="badge bg-warning">{{ order.status.title() }}</span>
+                                {% elif order.status == 'processing' %}
+                                    <span class="badge bg-info">{{ order.status.title() }}</span>
+                                {% elif order.status == 'shipped' %}
+                                    <span class="badge bg-primary">{{ order.status.title() }}</span>
+                                {% elif order.status == 'completed' %}
+                                    <span class="badge bg-success">{{ order.status.title() }}</span>
+                                {% elif order.status == 'cancelled' %}
+                                    <span class="badge bg-danger">{{ order.status.title() }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ order.status.title() }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <!-- Customer Info -->
+                            <div class="col-6">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-2">
+                                        {% if order.face_photo_front %}
+                                            <img src="{{ order.face_photo_front }}" alt="Customer" class="rounded-circle" style="width: 35px; height: 35px; object-fit: cover;">
+                                        {% else %}
+                                            <i class="bi bi-person-circle fs-5 text-muted"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex-grow-1 min-w-0">
+                                        <div class="fw-bold small">{{ order.customer_name or 'Anonymous' }}</div>
+                                        <div class="text-muted small text-truncate">{{ order.customer_phone or 'No phone' }}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Product Info -->
+                            <div class="col-6">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-2">
+                                        {% if order.first_product_image %}
+                                            <img src="{{ order.first_product_image }}" alt="Product" class="rounded" style="width: 35px; height: 35px; object-fit: cover;">
+                                        {% else %}
+                                            <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
+                                                <i class="bi bi-image text-muted"></i>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex-grow-1 min-w-0">
+                                        <div class="fw-bold small text-truncate">{{ order.first_product_name or 'Unknown Product' }}</div>
+                                        <div class="text-muted small">
+                                            Qty: {{ order.item_count }}
+                                            {% if order.item_count > 1 %}
+                                                <span class="text-info">+{{ order.item_count - 1 }} more</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-3">
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-bold text-success">{{ order.total_amount_formatted }}</div>
+                                <small class="text-muted">{{ order.created_at_manila or 'N/A' }}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-inbox fs-1 d-block mb-3"></i>
+                    <h5>No orders yet</h5>
+                    <p class="mb-3">Orders for your products will appear here once customers start purchasing.</p>
+                    <a href="{{ url_for('seller_products') }}" class="btn btn-primary">
+                        <i class="bi bi-grid-3x3-gap"></i> Manage Products
+                    </a>
+                </div>
+            {% endif %}
         </div>
     </div>
     
@@ -240,49 +324,60 @@ document.addEventListener('DOMContentLoaded', function() {
             viewOrder(orderId);
         });
     });
-    
-    // Handle update status buttons
-    document.querySelectorAll('.update-status-btn').forEach(function(button) {
-        button.addEventListener('click', function() {
-            const orderId = this.getAttribute('data-order-id');
-            const newStatus = this.getAttribute('data-new-status');
-            updateOrderStatus(orderId, newStatus);
-        });
-    });
 });
 
 function viewOrder(orderId) {
     const modal = new bootstrap.Modal(document.getElementById('orderModal'));
-    modal.show();
     
-    // Here you would typically load order details via AJAX
+    // Find the order data from the table
+    const orderRow = document.querySelector(`[data-order-id="${orderId}"]`).closest('tr');
+    const orderData = {
+        id: orderId,
+        customer: orderRow.cells[1].textContent.trim(),
+        products: orderRow.cells[2].textContent.trim(),
+        quantity: orderRow.cells[3].textContent.trim(),
+        total: orderRow.cells[4].textContent.trim(),
+        status: orderRow.cells[5].textContent.trim(),
+        date: orderRow.cells[6].textContent.trim()
+    };
+    
+    // Show modal with order details
     document.getElementById('orderDetails').innerHTML = `
-        <div class="alert alert-info">
-            <i class="bi bi-info-circle"></i> Order details for Order #${orderId} would be loaded here.
-            This feature requires additional backend implementation.
+        <div class="row">
+            <div class="col-md-6">
+                <h6 class="text-muted">Order Information</h6>
+                <table class="table table-borderless table-sm">
+                    <tr><td><strong>Order ID:</strong></td><td>#${orderData.id}</td></tr>
+                    <tr><td><strong>Status:</strong></td><td>${orderData.status}</td></tr>
+                    <tr><td><strong>Date:</strong></td><td>${orderData.date}</td></tr>
+                    <tr><td><strong>Total:</strong></td><td>${orderData.total}</td></tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <h6 class="text-muted">Customer Information</h6>
+                <table class="table table-borderless table-sm">
+                    <tr><td><strong>Customer:</strong></td><td>${orderData.customer}</td></tr>
+                    <tr><td><strong>Items:</strong></td><td>${orderData.quantity} item(s)</td></tr>
+                    <tr><td><strong>Products:</strong></td><td>${orderData.products}</td></tr>
+                </table>
+            </div>
+        </div>
+        <div class="alert alert-info mt-3">
+            <i class="bi bi-info-circle"></i> Complete order details including item breakdown and shipping information would be available in a full implementation.
         </div>
     `;
-}
-
-function updateOrderStatus(orderId, newStatus) {
-    if (confirm(`Are you sure you want to update this order status to "${newStatus}"?`)) {
-        // Here you would typically send an AJAX request to update the order status
-        console.log(`Updating order ${orderId} to status: ${newStatus}`);
-        
-        // For now, just show an alert
-        alert(`Order status update feature requires backend implementation. Order #${orderId} would be updated to "${newStatus}".`);
-        
-        // In a real implementation, you would:
-        // 1. Send POST request to update order status
-        // 2. Refresh the page or update the UI dynamically
-        // 3. Show success/error messages
-    }
+    
+    modal.show();
 }
 
 // Auto-refresh every 30 seconds to check for new orders
 setInterval(function() {
-    // In a real implementation, you might want to check for new orders
-    // and update the page accordingly
+    // Auto-refresh the page to check for new orders every 30 seconds
+    // Only refresh if no modals are open
+    if (!document.querySelector('.modal.show')) {
+        // Uncomment the line below if you want auto-refresh
+        // window.location.reload();
+    }
 }, 30000);
 </script>
 {% endblock %}

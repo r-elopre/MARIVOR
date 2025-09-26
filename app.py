@@ -1562,12 +1562,170 @@ def seller_delete_product(product_id):
 
 @app.route('/seller/orders')
 def seller_orders():
-    """Seller orders page"""
+    """Seller orders page - Fixed template syntax error"""
     if session.get('user_type') != 'seller':
         flash('Seller access required!', 'error')
         return redirect(url_for('login'))
     
-    return render_template('seller/orders.html', orders=[])
+    try:
+        supabase_client = get_supabase_client()
+        seller_id = session.get('seller_id')
+        
+        if not seller_id:
+            flash('Seller ID not found in session!', 'error')
+            return render_template('seller/orders.html', orders=[])
+        
+        # Get orders for this seller
+        orders = supabase_client.get_seller_orders(seller_id)
+        
+        # Process orders to add formatted data for display
+        processed_orders = []
+        for order in orders:
+            processed_order = order.copy()
+            
+            # Convert created_at to Manila timezone if it exists
+            if order.get('created_at'):
+                try:
+                    import pytz
+                    from datetime import datetime
+                    
+                    # Parse UTC datetime
+                    utc_dt = datetime.fromisoformat(order['created_at'].replace('Z', '+00:00'))
+                    utc_dt = utc_dt.replace(tzinfo=pytz.UTC)
+                    
+                    # Convert to Manila timezone
+                    manila_tz = pytz.timezone('Asia/Manila')
+                    manila_dt = utc_dt.astimezone(manila_tz)
+                    
+                    processed_order['created_at_manila'] = manila_dt.strftime('%B %d, %Y at %I:%M %p')
+                    processed_order['created_at_date'] = manila_dt.strftime('%Y-%m-%d')
+                except Exception as e:
+                    print(f"Error converting timezone: {e}")
+                    processed_order['created_at_manila'] = order['created_at']
+                    processed_order['created_at_date'] = order['created_at']
+            
+            # Format currency as PHP
+            if order.get('total_amount'):
+                processed_order['total_amount_formatted'] = f"₱{order['total_amount']:.2f}"
+            else:
+                processed_order['total_amount_formatted'] = "₱0.00"
+            
+            # Parse items JSON if it exists
+            if order.get('items'):
+                if isinstance(order['items'], str):
+                    try:
+                        import json
+                        processed_order['items_list'] = json.loads(order['items'])
+                    except:
+                        processed_order['items_list'] = []
+                else:
+                    processed_order['items_list'] = order['items']
+            else:
+                processed_order['items_list'] = []
+            
+            # Calculate item count
+            processed_order['item_count'] = len(processed_order['items_list'])
+            
+            # Get product information from items JSON
+            if processed_order['items_list']:
+                first_item = processed_order['items_list'][0]
+                
+                # Try to get product image using product_id from the items JSON
+                product_id = first_item.get('product_id')
+                if product_id:
+                    try:
+                        product_details = supabase_client.get_product_by_id(product_id)
+                        if product_details and product_details.get('image_url'):
+                            processed_order['first_product_image'] = product_details['image_url']
+                        else:
+                            # Fallback to image_url from items JSON if exists
+                            processed_order['first_product_image'] = first_item.get('image_url', '')
+                    except Exception as e:
+                        print(f"Error fetching product image for product_id {product_id}: {e}")
+                        processed_order['first_product_image'] = first_item.get('image_url', '')
+                else:
+                    # Fallback to image_url from items JSON if no product_id
+                    processed_order['first_product_image'] = first_item.get('image_url', '')
+                
+                processed_order['first_product_name'] = first_item.get('name', 'Unknown Product')
+                processed_order['first_product_price'] = first_item.get('price', 0)
+                processed_order['first_product_quantity'] = first_item.get('quantity', 1)
+                
+                # Calculate total for all items
+                total_items = 0
+                total_value = 0
+                for item in processed_order['items_list']:
+                    quantity = item.get('quantity', 1)
+                    price = item.get('price', 0)
+                    total_items += quantity
+                    total_value += quantity * price
+                
+                processed_order['total_items_count'] = total_items
+                processed_order['calculated_total'] = total_value
+                processed_order['calculated_total_formatted'] = f"₱{total_value:.2f}"
+            else:
+                processed_order['first_product_image'] = ''
+                processed_order['first_product_name'] = 'No Products'
+                processed_order['first_product_price'] = 0
+                processed_order['first_product_quantity'] = 0
+                processed_order['total_items_count'] = 0
+                processed_order['calculated_total'] = 0
+                processed_order['calculated_total_formatted'] = "₱0.00"
+            
+            processed_orders.append(processed_order)
+        
+        return render_template('seller/orders.html', orders=processed_orders)
+        
+    except Exception as e:
+        print(f"Error loading seller orders: {e}")
+        flash(f'Error loading orders: {str(e)}', 'error')
+        return render_template('seller/orders.html', orders=[])
+
+@app.route('/seller/orders/update_status/<int:order_id>', methods=['POST'])
+def seller_update_order_status(order_id):
+    """Update order status from seller panel"""
+    if session.get('user_type') != 'seller':
+        flash('Seller access required!', 'error')
+        return redirect(url_for('login'))
+    
+    try:
+        new_status = request.form.get('status')
+        if not new_status:
+            flash('Status is required!', 'error')
+            return redirect(url_for('seller_orders'))
+        
+        # Valid status values
+        valid_statuses = ['pending', 'processing', 'shipped', 'completed', 'cancelled']
+        if new_status not in valid_statuses:
+            flash('Invalid status!', 'error')
+            return redirect(url_for('seller_orders'))
+        
+        supabase_client = get_supabase_client()
+        seller_id = session.get('seller_id')
+        
+        # First verify that this order belongs to this seller
+        order = supabase_client.get_order_by_id(order_id)
+        if not order:
+            flash('Order not found!', 'error')
+            return redirect(url_for('seller_orders'))
+        
+        if order.get('seller_id') != seller_id:
+            flash('You can only update orders from your store!', 'error')
+            return redirect(url_for('seller_orders'))
+        
+        # Update the order status
+        success = supabase_client.update_order_status(order_id, new_status)
+        
+        if success:
+            flash(f'Order status updated to {new_status}!', 'success')
+        else:
+            flash('Failed to update order status!', 'error')
+            
+    except Exception as e:
+        print(f"Error updating order status: {e}")
+        flash(f'Error updating order status: {str(e)}', 'error')
+    
+    return redirect(url_for('seller_orders'))
 
 @app.route('/seller/settings', methods=['GET', 'POST'])
 def seller_settings():
