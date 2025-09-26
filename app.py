@@ -708,7 +708,7 @@ def face_login():
             
             # Redirect based on user type
             if session['user_type'] == 'seller':
-                return redirect(url_for('seller_dashboard'))
+                return redirect(url_for('seller_products'))
             else:
                 next_page = session.pop('next_page', None)
                 return redirect(next_page if next_page else url_for('home'))
@@ -726,7 +726,7 @@ def face_login():
             session['login_method'] = 'seller_code'
             
             flash(f'Welcome back, {seller["store_name"]}!', 'success')
-            return redirect(url_for('seller_dashboard'))
+            return redirect(url_for('seller_products'))
         
         # Neither customer nor seller code found
         flash('Invalid code. Please check your code and try again.', 'error')
@@ -1292,76 +1292,9 @@ def admin_toggle_seller(seller_id):
 
 # Seller routes
 @app.route('/seller')
-@app.route('/seller/dashboard')
-def seller_dashboard():
-    """Seller dashboard"""
-    if session.get('user_type') != 'seller':
-        flash('Seller access required!', 'error')
-        return redirect(url_for('login'))
-    
-    try:
-        supabase_client = get_supabase_client()
-        seller_id = session.get('seller_id')
-        
-        # Get seller info - handle as simple dict for now
-        try:
-            seller = supabase_client.get_seller_by_id(seller_id)
-        except:
-            seller = None
-            
-        if not seller:
-            # Create a basic seller object from session data
-            seller = {
-                'store_name': session.get('store_name', 'My Store'),
-                'seller_code': session.get('user_id', 'UNKNOWN'),
-                'description': 'Welcome to your store!',
-                'is_active': True,
-                'created_at': 'Recently',
-                'store_image_url': None
-            }
-        
-        # Get seller's products - handle gracefully if method doesn't exist
-        try:
-            products = supabase_client.get_seller_products(seller_id) or []
-        except:
-            products = []
-        
-        # Calculate stats
-        stats = {
-            'total_products': len(products),
-            'fish_products': len([p for p in products if p.get('category') == 'Fish']),
-            'vegetable_products': len([p for p in products if p.get('category') == 'Vegetables']),
-            'out_of_stock': len([p for p in products if p.get('stock', 0) == 0]),
-            'total_orders': 0,
-            'total_revenue': 0.0,
-            'monthly_revenue': 0.0,
-            'monthly_orders': 0
-        }
-        
-        return render_template('seller/dashboard.html', seller=seller, stats=stats, products=products[:5])  # Show last 5 products
-    
-    except Exception as e:
-        flash(f'Error loading dashboard: {str(e)}', 'error')
-        # Provide basic fallback data
-        seller = {
-            'store_name': session.get('store_name', 'My Store'),
-            'seller_code': session.get('user_id', 'UNKNOWN'),
-            'description': 'Welcome to your store!',
-            'is_active': True,
-            'created_at': 'Recently',
-            'store_image_url': None
-        }
-        stats = {
-            'total_products': 0,
-            'fish_products': 0,
-            'vegetable_products': 0,
-            'out_of_stock': 0,
-            'total_orders': 0,
-            'total_revenue': 0.0,
-            'monthly_revenue': 0.0,
-            'monthly_orders': 0
-        }
-        return render_template('seller/dashboard.html', seller=seller, stats=stats, products=[])
+def seller_redirect():
+    """Redirect /seller to /seller/products for simplicity"""
+    return redirect(url_for('seller_products'))
 
 @app.route('/seller/products')
 def seller_products():
@@ -1588,7 +1521,7 @@ def seller_store_settings():
     
     except Exception as e:
         flash(f'Error: {str(e)}', 'error')
-        return redirect(url_for('seller_dashboard'))
+        return redirect(url_for('seller_products'))
 
 @app.route('/admin/logout')
 def admin_logout():

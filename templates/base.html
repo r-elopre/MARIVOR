@@ -178,8 +178,8 @@
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end p-2">
                                 {% if is_seller %}
-                                    <li><a class="dropdown-item py-2 px-3 fs-6" href="{{ url_for('seller_dashboard') }}">
-                                        <i class="bi bi-speedometer2 fs-5 me-2"></i> Dashboard
+                                    <li><a class="dropdown-item py-2 px-3 fs-6" href="{{ url_for('seller_products') }}">
+                                        <i class="bi bi-grid-3x3-gap fs-5 me-2"></i> My Products
                                     </a></li>
                                 {% else %}
                                     <li><a class="dropdown-item py-2 px-3 fs-6" href="{{ url_for('profile') }}">
@@ -264,7 +264,7 @@
                 <span>Cart</span>
             </a>
             {% if is_logged_in %}
-                <a href="{{ url_for('profile') if not is_seller else url_for('seller_dashboard') }}" class="bottom-nav-item">
+                <a href="{{ url_for('profile') if not is_seller else url_for('seller_products') }}" class="bottom-nav-item">
                     <i class="bi bi-person-circle"></i>
                     <span>{{ 'Store' if is_seller else 'Profile' }}</span>
                 </a>

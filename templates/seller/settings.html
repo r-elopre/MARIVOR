@@ -137,6 +137,25 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Account Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-gear"></i> Account Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid">
+                    <a href="{{ url_for('seller_logout') }}" class="btn btn-outline-danger">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </a>
+                </div>
+                <div class="form-text mt-2 text-center">
+                    Sign out of your seller account
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

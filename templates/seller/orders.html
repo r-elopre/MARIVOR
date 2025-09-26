@@ -12,25 +12,25 @@
 {% block content %}
 <!-- Order Statistics -->
 <div class="row mb-4">
-    <div class="col-md-3">
+    <div class="col-6 col-md-3 mb-3 mb-md-0">
         <div class="stat-card text-center">
             <div class="stat-number text-primary">{{ orders|length if orders else 0 }}</div>
             <h6 class="text-muted">Total Orders</h6>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-6 col-md-3 mb-3 mb-md-0">
         <div class="stat-card text-center">
             <div class="stat-number text-warning">{{ orders|selectattr('status', 'eq', 'pending')|list|length if orders else 0 }}</div>
             <h6 class="text-muted">Pending</h6>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-6 col-md-3">
         <div class="stat-card text-center">
             <div class="stat-number text-info">{{ orders|selectattr('status', 'eq', 'processing')|list|length if orders else 0 }}</div>
             <h6 class="text-muted">Processing</h6>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-6 col-md-3">
         <div class="stat-card text-center">
             <div class="stat-number text-success">{{ orders|selectattr('status', 'eq', 'completed')|list|length if orders else 0 }}</div>
             <h6 class="text-muted">Completed</h6>

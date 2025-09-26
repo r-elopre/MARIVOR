@@ -164,6 +164,37 @@ footer {
     transition: all 0.3s ease;
 }
 
+/* Seller Statistics Cards */
+.stat-card {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1.5rem 1rem;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+/* Responsive adjustments for stat cards */
+@media (max-width: 576px) {
+    .stat-card {
+        padding: 1rem 0.5rem;
+    }
+    
+    .stat-number {
+        font-size: 1.5rem;
+    }
+}
+
 /* Price Display */
 .text-primary.fw-bold {
     color: var(--primary-color) !important;
