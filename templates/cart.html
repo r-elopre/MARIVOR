@@ -893,11 +893,26 @@ function confirmOrder() {
             completedOrders++;
             
             if (data.success) {
-                orderResults.push({
-                    success: true,
-                    seller: sellerName,
-                    order_number: data.order_number
-                });
+                // Handle multiple orders response
+                if (data.orders && Array.isArray(data.orders)) {
+                    // Multiple orders created for this seller
+                    data.orders.forEach(order => {
+                        orderResults.push({
+                            success: true,
+                            seller: sellerName,
+                            order_number: order.order_number,
+                            product_name: order.product_name,
+                            total: order.total
+                        });
+                    });
+                } else {
+                    // Fallback for single order response
+                    orderResults.push({
+                        success: true,
+                        seller: sellerName,
+                        order_number: data.order_number || 'Unknown'
+                    });
+                }
             } else {
                 failedOrders++;
                 orderResults.push({
@@ -945,8 +960,17 @@ function confirmOrder() {
                     'Content-Type': 'application/json',
                 }
             }).then(() => {
-                const successOrders = results.filter(r => r.success).map(r => r.order_number).join(', ');
-                showNotification(`🎉 ${total} orders created successfully! Order numbers: ${successOrders}`, 'success');
+                // Create detailed success message with individual orders
+                const successOrders = results.filter(r => r.success);
+                let orderDetails = successOrders.map(r => {
+                    if (r.product_name) {
+                        return `${r.order_number} (${r.product_name})`;
+                    } else {
+                        return r.order_number;
+                    }
+                }).join(', ');
+                
+                showNotification(`🎉 ${successOrders.length} separate orders created successfully! Orders: ${orderDetails}`, 'success');
                 
                 // Clear cart and redirect to home
                 setTimeout(() => {

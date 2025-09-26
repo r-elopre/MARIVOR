@@ -450,39 +450,65 @@ def api_order_create():
         if not user_info:
             return jsonify({'success': False, 'error': 'User not found'})
         
-        # Generate order number
+        # Generate base order number for grouping
         import time
         import random
-        order_number = f"ORD-{int(time.time())}-{random.randint(100, 999)}"
+        base_timestamp = int(time.time())
+        base_random = random.randint(100, 999)
         
-        # Prepare order data
-        order_data = {
-            'user_id': user_info.get('id'),  # Use user ID from database
-            'order_number': order_number,
-            'status': 'pending',
-            'total_amount': cart_data.get('total_price', 0.0),
-            'currency': 'PHP',
-            'customer_name': user_info.get('full_name') or f"{user_info.get('first_name', '')} {user_info.get('last_name', '')}".strip(),
-            'customer_phone': user_info.get('phone'),
-            'shipping_address': shipping_address,
-            'items': cart_data.get('items', []),
-            'face_photo_front': user_info.get('face_photo_front')
-        }
+        # Create separate order for each product
+        created_orders = []
         
-        # Create order in database
-        created_order = supabase_client.create_order(order_data)
-        
-        if not created_order:
-            return jsonify({'success': False, 'error': 'Failed to create order'})
+        for index, item in enumerate(cart_data.get('items', [])):
+            # Generate unique order number for each product
+            order_number = f"ORD-{base_timestamp}-{base_random}-{index + 1}"
+            
+            # Calculate item total (price * quantity)
+            item_quantity = item.get('quantity', 1)
+            item_price = item.get('price', 0.0)
+            item_total = item_quantity * item_price
+            
+            # Prepare order data for this single product
+            order_data = {
+                'user_id': user_info.get('id'),  # Use user ID from database
+                'order_number': order_number,
+                'status': 'pending',
+                'total_amount': item_total,  # Only this item's total
+                'currency': 'PHP',
+                'customer_name': user_info.get('full_name') or f"{user_info.get('first_name', '')} {user_info.get('last_name', '')}".strip(),
+                'customer_phone': user_info.get('phone'),
+                'shipping_address': shipping_address,
+                'items': [item],  # Only this single item
+                'face_photo_front': user_info.get('face_photo_front')
+                # Removed seller_id - all seller info is in items JSONB
+            }
+            
+            # Create order in database for this product
+            created_order = supabase_client.create_order(order_data)
+            
+            if not created_order:
+                return jsonify({'success': False, 'error': f'Failed to create order for {item.get("name", "product")}'})
+            
+            created_orders.append({
+                'order_id': created_order.get('id'),
+                'order_number': order_number,
+                'product_name': item.get('name'),
+                'total': item_total
+            })
         
         # Clear cart after successful order creation
         session['cart'] = {'items': [], 'total_items': 0, 'total_price': 0.0}
         
+        # Prepare response with all created orders
+        total_orders = len(created_orders)
+        order_numbers = [order['order_number'] for order in created_orders]
+        
         return jsonify({
             'success': True,
-            'order_number': order_number,
-            'order_id': created_order.get('id'),
-            'message': f'Order {order_number} created successfully!'
+            'message': f'{total_orders} orders created successfully!',
+            'orders': created_orders,
+            'order_numbers': order_numbers,
+            'total_orders': total_orders
         })
         
     except Exception as e:
@@ -520,49 +546,76 @@ def api_order_create_by_seller():
         if not user_info:
             return jsonify({'success': False, 'error': 'User not found'})
         
-        # Get seller_id from the first product
-        seller_id = None
-        if seller_items and len(seller_items) > 0:
-            product_id = seller_items[0].get('product_id')
+        # Generate base order number for grouping
+        import time
+        import random
+        base_timestamp = int(time.time())
+        base_random = random.randint(100, 999)
+        
+        # Create separate order for each product in seller_items
+        created_orders = []
+        
+        for index, item in enumerate(seller_items):
+            # Generate unique order number for each product
+            order_number = f"ORD-{base_timestamp}-{base_random}-{index + 1}"
+            
+            # Calculate item total (price * quantity)
+            item_quantity = item.get('quantity', 1)
+            item_price = item.get('price', 0.0)
+            item_total = item_quantity * item_price
+            
+            # Get seller_id for this specific product (only for items enhancement)
+            product_seller_id = None
+            product_id = item.get('product_id')
             if product_id:
                 product = supabase_client.get_product_by_id(product_id)
                 if product:
-                    seller_id = product.get('seller_id')
+                    product_seller_id = product.get('seller_id')
+                    # Ensure item has seller info for JSONB storage
+                    if 'seller_id' not in item:
+                        item['seller_id'] = product_seller_id
+                    if 'seller_name' not in item:
+                        item['seller_name'] = product.get('seller_name', 'Unknown Seller')
+            
+            # Prepare order data for this single product
+            order_data = {
+                'user_id': user_info.get('id'),
+                'order_number': order_number,
+                'status': 'pending',
+                'total_amount': item_total,  # Only this item's total
+                'currency': 'PHP',
+                'customer_name': user_info.get('full_name') or f"{user_info.get('first_name', '')} {user_info.get('last_name', '')}".strip(),
+                'customer_phone': user_info.get('phone'),
+                'shipping_address': shipping_address,
+                'items': [item],  # Only this single item with seller info
+                'face_photo_front': user_info.get('face_photo_front')
+                # Removed seller_id from order level - all seller info is in items JSONB
+            }
+            
+            # Create order in database for this product
+            created_order = supabase_client.create_order(order_data)
+            
+            if not created_order:
+                return jsonify({'success': False, 'error': f'Failed to create order for {item.get("name", "product")}'})
+            
+            created_orders.append({
+                'order_id': created_order.get('id'),
+                'order_number': order_number,
+                'product_name': item.get('name'),
+                'total': item_total
+            })
         
-        # Generate order number
-        import time
-        import random
-        order_number = f"ORD-{int(time.time())}-{random.randint(100, 999)}"
-        
-        # Prepare order data for single seller
-        order_data = {
-            'user_id': user_info.get('id'),
-            'seller_id': seller_id,
-            'order_number': order_number,
-            'status': 'pending',
-            'total_amount': total_amount,
-            'currency': 'PHP',
-            'customer_name': user_info.get('full_name') or f"{user_info.get('first_name', '')} {user_info.get('last_name', '')}".strip(),
-            'customer_phone': user_info.get('phone'),
-            'shipping_address': shipping_address,
-            'items': seller_items,
-            'face_photo_front': user_info.get('face_photo_front')
-        }
-        
-        # Create order in database
-        created_order = supabase_client.create_single_seller_order(order_data)
-        
-        if not created_order:
-            return jsonify({'success': False, 'error': f'Failed to create order for {seller_name}'})
-        
-        # Only clear cart items for this seller (we'll handle this on frontend after all orders complete)
+        # Prepare response with all created orders for this seller
+        total_orders = len(created_orders)
+        order_numbers = [order['order_number'] for order in created_orders]
         
         return jsonify({
             'success': True,
-            'order_number': order_number,
-            'order_id': created_order.get('id'),
-            'seller_name': seller_name,
-            'message': f'Order {order_number} created successfully for {seller_name}!'
+            'message': f'{total_orders} orders created successfully for {seller_name}!',
+            'orders': created_orders,
+            'order_numbers': order_numbers,
+            'total_orders': total_orders,
+            'seller_name': seller_name
         })
         
     except Exception as e:
