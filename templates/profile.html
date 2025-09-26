@@ -102,10 +102,27 @@
                                     </div>
                                     
                                     <div class="order-details">
-                                        {% if order.products_name %}
+                                        <!-- Enhanced Product Information from items JSONB -->
+                                        {% if order.parsed_items and order.parsed_items.total_products > 0 %}
+                                        <div class="mb-3">
+                                            <strong>Products ({{ order.parsed_items.total_products }} item{% if order.parsed_items.total_products != 1 %}s{% endif %}):</strong>
+                                            <div class="products-list mt-2">
+                                                {% for product_name in order.parsed_items.product_names %}
+                                                <div class="product-item d-flex justify-content-between align-items-center mb-1 p-2 bg-light rounded">
+                                                    <div class="product-details">
+                                                        <span class="product-name">{{ product_name }}</span>
+                                                        {% if order.parsed_items.quantities[loop.index0] %}
+                                                        <small class="text-muted ms-2">(Qty: {{ order.parsed_items.quantities[loop.index0] }})</small>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                        {% elif order.formatted_products %}
                                         <div class="mb-2">
                                             <strong>Products:</strong> 
-                                            <span class="text-muted">{{ order.products_name }}</span>
+                                            <span class="text-muted">{{ order.formatted_products }}</span>
                                         </div>
                                         {% endif %}
                                         
@@ -137,10 +154,21 @@
                                     </div>
                                     {% endif %}
                                     
-                                    {% if order.seller_store_name %}
+                                    {% if order.seller_store_names %}
+                                    <div class="seller-info">
+                                        <strong>Seller{% if order.seller_store_names|length > 1 %}s{% endif %}:</strong>
+                                        {% for seller_name in order.seller_store_names %}
+                                        <div class="seller-badge mt-1">
+                                            <small class="badge bg-info text-dark">
+                                                <i class="bi bi-shop"></i> {{ seller_name }}
+                                            </small>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% elif order.formatted_sellers %}
                                     <div class="seller-info">
                                         <small class="text-muted">
-                                            <i class="bi bi-shop"></i> {{ order.seller_store_name }}
+                                            <i class="bi bi-shop"></i> {{ order.formatted_sellers }}
                                         </small>
                                     </div>
                                     {% endif %}
@@ -269,6 +297,26 @@
     padding: 0.5rem;
     border-radius: 6px;
     margin-top: 0.5rem;
+}
+
+.seller-badge {
+    display: inline-block;
+    margin-right: 0.5rem;
+}
+
+.products-list .product-item {
+    border: 1px solid #e9ecef;
+    font-size: 0.9rem;
+}
+
+.products-list .product-name {
+    font-weight: 500;
+    color: #495057;
+}
+
+.products-list .text-muted {
+    font-size: 0.8rem;
+    font-family: monospace;
 }
 
 @media (max-width: 768px) {

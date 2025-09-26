@@ -639,10 +639,79 @@ class SupabaseClient:
             return False
     
     def get_user_orders(self, user_id: int) -> List[Dict[str, Any]]:
-        """Get orders for a specific user"""
+        """Get orders for a specific user with enhanced product details from items JSONB"""
         try:
             response = self.client.table('orders').select('*').eq('user_id', user_id).order('created_at', desc=True).execute()
-            return response.data if response.data else []
+            orders = response.data if response.data else []
+            
+            # Process each order to extract product details from items JSONB
+            for order in orders:
+                if order.get('items'):
+                    try:
+                        import json
+                        # Parse items if it's a string, otherwise assume it's already parsed
+                        items = json.loads(order['items']) if isinstance(order['items'], str) else order['items']
+                        
+                        # Extract product details from items array
+                        product_names = []
+                        seller_ids = []
+                        product_ids = []
+                        quantities = []
+                        
+                        for item in items:
+                            if isinstance(item, dict):
+                                # Get product name (use 'name' field from JSONB)
+                                if item.get('name'):
+                                    product_names.append(item['name'])
+                                
+                                # Get seller ID
+                                if item.get('seller_id'):
+                                    seller_ids.append(str(item['seller_id']))
+                                
+                                # Get product ID
+                                if item.get('product_id'):
+                                    product_ids.append(str(item['product_id']))
+                                
+                                # Get quantity
+                                if item.get('quantity'):
+                                    quantities.append(item['quantity'])
+                        
+                        # Add parsed data to order
+                        order['parsed_items'] = {
+                            'product_names': product_names,
+                            'seller_ids': list(set(seller_ids)),  # Remove duplicates
+                            'product_ids': product_ids,
+                            'quantities': quantities,
+                            'total_products': len(items)
+                        }
+                        
+                        # Create a formatted product list string for display
+                        if product_names:
+                            order['formatted_products'] = ', '.join(product_names[:3])  # Show first 3 products
+                            if len(product_names) > 3:
+                                order['formatted_products'] += f" and {len(product_names) - 3} more"
+                        else:
+                            order['formatted_products'] = "No products listed"
+                            
+                    except (json.JSONDecodeError, TypeError) as e:
+                        print(f"Error parsing items JSON for order {order.get('id', 'unknown')}: {e}")
+                        order['parsed_items'] = {
+                            'product_names': [],
+                            'seller_ids': [],
+                            'product_ids': [],
+                            'total_products': 0
+                        }
+                        order['formatted_products'] = "Error loading product details"
+                else:
+                    order['parsed_items'] = {
+                        'product_names': [],
+                        'seller_ids': [],
+                        'product_ids': [],
+                        'total_products': 0
+                    }
+                    order['formatted_products'] = "No items data"
+            
+            return orders
         except Exception as e:
             print(f"Error getting user orders: {e}")
             return []
@@ -943,20 +1012,34 @@ class SupabaseClient:
         # Just redirect to the main create_order function for consistency
         return self.create_order(order_data)
     
-    def get_user_orders(self, user_id: int) -> List[Dict[str, Any]]:
-        """Get all orders for a specific user"""
-        try:
-            response = self.client.table('orders').select('*').eq('user_id', user_id).order('created_at', desc=True).execute()
-            return response.data if response.data else []
-        except Exception as e:
-            print(f"Error getting user orders: {e}")
-            return []
+
     
     def get_seller_orders(self, seller_id: int) -> List[Dict[str, Any]]:
-        """Get all orders for a specific seller"""
+        """Get all orders for a specific seller by parsing items JSONB column"""
         try:
-            response = self.client.table('orders').select('*').eq('seller_id', seller_id).order('created_at', desc=True).execute()
-            return response.data if response.data else []
+            # Get all orders and filter by seller_id in items JSONB
+            response = self.client.table('orders').select('*').order('created_at', desc=True).execute()
+            all_orders = response.data if response.data else []
+            
+            seller_orders = []
+            for order in all_orders:
+                if order.get('items'):
+                    try:
+                        import json
+                        # Parse items if it's a string, otherwise assume it's already parsed
+                        items = json.loads(order['items']) if isinstance(order['items'], str) else order['items']
+                        
+                        # Check if any item in this order belongs to the seller
+                        for item in items:
+                            if isinstance(item, dict) and item.get('seller_id') == seller_id:
+                                seller_orders.append(order)
+                                break  # Found matching seller, add order once and move to next order
+                                
+                    except (json.JSONDecodeError, TypeError) as e:
+                        print(f"Error parsing items JSON for order {order.get('id', 'unknown')}: {e}")
+                        continue
+            
+            return seller_orders
         except Exception as e:
             print(f"Error getting seller orders: {e}")
             return []

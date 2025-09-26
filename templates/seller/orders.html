@@ -90,8 +90,7 @@
                             {% for order in orders %}
                             <tr>
                                 <td>
-                                    <strong>#{{ order.id }}</strong>
-                                    <br><small class="text-muted">{{ order.order_number or order.id }}</small>
+                                    <small class="text-muted">{{ order.order_number or order.id }}</small>
                                 </td>
                                 <td>
                                     <div class="d-flex align-items-center">
@@ -122,14 +121,12 @@
                                             <small class="text-muted">
                                                 {% if order.item_count > 1 %}
                                                     +{{ order.item_count - 1 }} more items
-                                                {% else %}
-                                                    Single item
                                                 {% endif %}
                                             </small>
                                         </div>
                                     </div>
                                 </td>
-                                <td class="fw-bold">{{ order.item_count or 1 }}</td>
+                                <td class="fw-bold">{{ order.total_items_count or 1 }}</td>
                                 <td class="fw-bold">{{ order.total_amount_formatted or "₱0.00" }}</td>
                                 <td>
                                     {% if order.status == 'pending' %}
@@ -178,8 +175,7 @@
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start mb-3">
                             <div>
-                                <h6 class="mb-1">Order #{{ order.id }}</h6>
-                                <small class="text-muted">{{ order.order_number or order.id }}</small>
+                                <h6 class="mb-1">{{ order.order_number or order.id }}</h6>
                             </div>
                             <div class="text-end">
                                 {% if order.status == 'pending' %}
@@ -231,7 +227,7 @@
                                     <div class="flex-grow-1 min-w-0">
                                         <div class="fw-bold small text-truncate">{{ order.first_product_name or 'Unknown Product' }}</div>
                                         <div class="text-muted small">
-                                            Qty: {{ order.item_count }}
+                                            Qty: {{ order.total_items_count }}
                                             {% if order.item_count > 1 %}
                                                 <span class="text-info">+{{ order.item_count - 1 }} more</span>
                                             {% endif %}

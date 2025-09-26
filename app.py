@@ -701,12 +701,27 @@ def profile():
                 except (ValueError, TypeError):
                     pass
             
-            # Fetch seller store name if seller_id exists
-            if order.get('seller_id'):
-                seller_info = supabase_client.get_seller_by_id(order['seller_id'])
-                order['seller_store_name'] = seller_info.get('store_name', 'Unknown Store') if seller_info else 'Unknown Store'
+            # Fetch seller store names based on parsed seller IDs from items
+            seller_store_names = []
+            if order.get('parsed_items') and order['parsed_items'].get('seller_ids'):
+                for seller_id in order['parsed_items']['seller_ids']:
+                    try:
+                        seller_info = supabase_client.get_seller_by_id(int(seller_id))
+                        store_name = seller_info.get('store_name', f'Store #{seller_id}') if seller_info else f'Unknown Store #{seller_id}'
+                        seller_store_names.append(store_name)
+                    except (ValueError, TypeError):
+                        seller_store_names.append(f'Store #{seller_id}')
+                
+                # Add formatted seller names to order
+                order['seller_store_names'] = seller_store_names
+                order['formatted_sellers'] = ', '.join(seller_store_names) if seller_store_names else 'Marivor Official'
             else:
-                order['seller_store_name'] = 'Marivor Official'
+                # Fallback to original seller_id if no parsed data
+                if order.get('seller_id'):
+                    seller_info = supabase_client.get_seller_by_id(order['seller_id'])
+                    order['formatted_sellers'] = seller_info.get('store_name', 'Unknown Store') if seller_info else 'Unknown Store'
+                else:
+                    order['formatted_sellers'] = 'Marivor Official'
         
         return render_template('profile.html', 
                              user_info=user_info,
