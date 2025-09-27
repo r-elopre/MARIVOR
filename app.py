@@ -969,35 +969,138 @@ def admin_orders():
         supabase_client = get_supabase_client()
         status_filter = request.args.get('status', 'all')
         
+        # Get orders based on filter
         if status_filter == 'all':
             orders = supabase_client.get_all_orders()
         else:
             orders = supabase_client.get_orders_by_status(status_filter)
         
-        return render_template('admin/orders.html', orders=orders, current_filter=status_filter)
+        print(f"DEBUG: Got {len(orders) if orders else 0} orders")
+        
+        # Process orders to parse JSON items and add user info
+        processed_orders = []
+        if orders:
+            for order in orders:
+                if isinstance(order, dict):
+                    processed_order = dict(order)  # Create a copy
+                    
+                    # Parse items JSONB if it exists
+                    if order.get('items'):
+                        try:
+                            import json
+                            if isinstance(order['items'], str):
+                                processed_order['items'] = json.loads(order['items'])
+                            else:
+                                processed_order['items'] = order['items']
+                        except (json.JSONDecodeError, TypeError) as e:
+                            print(f"Error parsing items for order {order.get('id')}: {e}")
+                            processed_order['items'] = []
+                    else:
+                        processed_order['items'] = []
+                    
+                    # Format currency
+                    if order.get('total_amount'):
+                        processed_order['total_formatted'] = f"₱{float(order['total_amount']):.2f}"
+                    
+                    # Get user info if customer_name is empty
+                    if not order.get('customer_name') or order.get('customer_name').strip() == '':
+                        try:
+                            user_response = supabase_client.client.table('users').select('username, phone_number').eq('id', order.get('user_id')).execute()
+                            if user_response.data and len(user_response.data) > 0:
+                                user_info = user_response.data[0]
+                                processed_order['customer_name'] = user_info.get('username', f'User #{order.get("user_id")}')
+                                if not processed_order.get('customer_phone') or processed_order.get('customer_phone') == 'None':
+                                    processed_order['customer_phone'] = user_info.get('phone_number')
+                        except Exception as e:
+                            print(f"Error fetching user info for order {order.get('id')}: {e}")
+                            processed_order['customer_name'] = f'User #{order.get("user_id")}'
+                    
+                    processed_orders.append(processed_order)
+        
+        print(f"DEBUG: Processed {len(processed_orders)} orders")
+        return render_template('admin/orders.html', orders=processed_orders, current_filter=status_filter)
+        
     except Exception as e:
+        print(f"ERROR in admin_orders: {e}")
+        import traceback
+        traceback.print_exc()
         flash(f'Error loading orders: {str(e)}', 'error')
         return render_template('admin/orders.html', orders=[], current_filter='all')
 
 @app.route('/admin/orders/update_status/<int:order_id>', methods=['POST'])
 def admin_update_order_status(order_id):
-    """Update order status"""
+    """Update order status with validation and progression logic"""
     if not session.get('is_admin'):
         return jsonify({'success': False, 'error': 'Admin access required'})
     
     try:
-        new_status = request.form.get('status')
+        # Get the new status from the request
+        if request.content_type == 'application/json':
+            data = request.get_json()
+            new_status = data.get('status')
+        else:
+            new_status = request.form.get('status')
+        
+        if not new_status:
+            return jsonify({'success': False, 'error': 'Status is required'})
+        
+        # Validate status values
+        valid_statuses = ['pending', 'processing', 'on_delivery', 'completed', 'cancelled']
+        if new_status not in valid_statuses:
+            return jsonify({'success': False, 'error': 'Invalid status'})
         
         supabase_client = get_supabase_client()
+        
+        # Get current order to validate progression
+        current_order = supabase_client.get_order_by_id(order_id)
+        if not current_order:
+            return jsonify({'success': False, 'error': 'Order not found'})
+        
+        current_status = current_order.get('status', 'pending')
+        
+        # Define valid status progressions
+        status_progressions = {
+            'pending': ['processing', 'cancelled'],
+            'processing': ['on_delivery', 'cancelled'],
+            'on_delivery': ['completed', 'cancelled'],
+            'completed': [],  # Final state
+            'cancelled': []   # Final state
+        }
+        
+        # Check if the status transition is valid
+        if current_status == new_status:
+            return jsonify({'success': False, 'error': f'Order is already {new_status}'})
+        
+        if new_status not in status_progressions.get(current_status, []):
+            return jsonify({'success': False, 'error': f'Cannot change status from {current_status} to {new_status}'})
+        
+        # Update the order status
         success = supabase_client.update_order_status(order_id, new_status)
         
         if success:
-            flash(f'Order #{order_id} status updated to {new_status}!', 'success')
-            return jsonify({'success': True})
+            # Create user-friendly status messages
+            status_messages = {
+                'processing': 'Order is now being processed',
+                'on_delivery': 'Order is out for delivery',
+                'completed': 'Order has been completed successfully',
+                'cancelled': 'Order has been cancelled'
+            }
+            
+            message = status_messages.get(new_status, f'Order status updated to {new_status}')
+            
+            flash(f'Order #{order_id} - {message}!', 'success')
+            return jsonify({
+                'success': True, 
+                'message': message,
+                'new_status': new_status,
+                'order_id': order_id
+            })
         else:
-            return jsonify({'success': False, 'error': 'Failed to update order status'})
+            return jsonify({'success': False, 'error': 'Failed to update order status in database'})
+            
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+        print(f"Error updating order status: {e}")
+        return jsonify({'success': False, 'error': f'Server error: {str(e)}'})
 
 @app.route('/admin/products')
 def admin_products():

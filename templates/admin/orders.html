@@ -14,13 +14,21 @@
            class="btn {% if current_filter == 'all' %}btn-primary{% else %}btn-outline-primary{% endif %}">
             All Orders
         </a>
-        <a href="{{ url_for('admin_orders', status='processed') }}" 
-           class="btn {% if current_filter == 'processed' %}btn-warning{% else %}btn-outline-warning{% endif %}">
-            Processed
+        <a href="{{ url_for('admin_orders', status='pending') }}" 
+           class="btn {% if current_filter == 'pending' %}btn-warning{% else %}btn-outline-warning{% endif %}">
+            Pending
+        </a>
+        <a href="{{ url_for('admin_orders', status='processing') }}" 
+           class="btn {% if current_filter == 'processing' %}btn-info{% else %}btn-outline-info{% endif %}">
+            Processing
         </a>
         <a href="{{ url_for('admin_orders', status='on_delivery') }}" 
-           class="btn {% if current_filter == 'on_delivery' %}btn-info{% else %}btn-outline-info{% endif %}">
+           class="btn {% if current_filter == 'on_delivery' %}btn-success{% else %}btn-outline-success{% endif %}">
             On Delivery
+        </a>
+        <a href="{{ url_for('admin_orders', status='completed') }}" 
+           class="btn {% if current_filter == 'completed' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
+            Completed
         </a>
     </div>
 </div>
@@ -31,9 +39,9 @@
         <table class="table table-hover mb-0">
             <thead class="table-dark">
                 <tr>
-                    <th>Order ID</th>
-                    <th>Customer</th>
-                    <th>Phone</th>
+                    <th>Order Number</th>
+                    <th>Customer Info</th>
+                    <th>Shipping Address</th>
                     <th>Items</th>
                     <th>Total</th>
                     <th>Status</th>
@@ -45,21 +53,43 @@
                 {% for order in orders %}
                 <tr>
                     <td>
-                        <strong>#{{ order.id }}</strong>
+                        <strong>{{ order.order_number|default('#' ~ order.id) }}</strong>
                     </td>
                     <td>
-                        {% if order.users %}
-                            {{ order.users.username }}
-                        {% else %}
-                            <span class="text-muted">Unknown User</span>
-                        {% endif %}
+                        <div class="d-flex align-items-center">
+                            {% if order.face_photo_front %}
+                                <img src="{{ order.face_photo_front }}" alt="Customer" class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                            {% else %}
+                                <div class="bg-secondary rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                    <i class="bi bi-person text-white"></i>
+                                </div>
+                            {% endif %}
+                            <div>
+                                {% if order.customer_name %}
+                                    <div class="fw-medium">{{ order.customer_name }}</div>
+                                {% else %}
+                                    <div class="fw-medium text-muted">User ID: {{ order.user_id }}</div>
+                                {% endif %}
+                                {% if order.customer_phone and order.customer_phone != 'None' %}
+                                    <small class="text-muted">
+                                        <i class="bi bi-telephone"></i> {{ order.customer_phone }}
+                                    </small>
+                                {% endif %}
+                            </div>
+                        </div>
                     </td>
                     <td>
-                        {% if order.users %}
-                            {{ order.users.phone_number }}
-                        {% else %}
-                            <span class="text-muted">-</span>
-                        {% endif %}
+                        <div class="small">
+                            {% if order.shipping_address %}
+                                <i class="bi bi-geo-alt text-primary"></i>
+                                {{ order.shipping_address[:50] }}{% if order.shipping_address|length > 50 %}...{% endif %}
+                                <button type="button" class="btn btn-link btn-sm p-0 ms-1" data-bs-toggle="tooltip" title="{{ order.shipping_address }}">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            {% else %}
+                                <span class="text-muted">No address provided</span>
+                            {% endif %}
+                        </div>
                     </td>
                     <td>
                         <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#itemsModal{{ order.id }}">
@@ -75,23 +105,59 @@
                                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                     </div>
                                     <div class="modal-body">
-                                        {% if order.items %}
-                                            {% for item in order.items %}
-                                            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
-                                                <div>
-                                                    <strong>{{ item.name }}</strong>
-                                                    <br>
-                                                    <small class="text-muted">{{ item.category }}</small>
-                                                </div>
-                                                <div class="text-end">
-                                                    <span class="badge bg-secondary">Qty: {{ item.quantity }}</span>
-                                                    <br>
-                                                    <small>₱{{ "%.2f"|format(item.price) }} each</small>
+                                        {% if order['items'] %}
+                                            {% for item in order['items'] %}
+                                            <div class="card mb-3">
+                                                <div class="card-body">
+                                                    <div class="row">
+                                                        <div class="col-md-8">
+                                                            <h6 class="card-title mb-2">
+                                                                <i class="bi bi-box"></i> {{ item.name }}
+                                                            </h6>
+                                                            <div class="row g-2">
+                                                                <div class="col-6">
+                                                                    <small class="text-muted">Product ID:</small>
+                                                                    <div class="fw-medium">#{{ item.product_id }}</div>
+                                                                </div>
+                                                                <div class="col-6">
+                                                                    <small class="text-muted">Seller:</small>
+                                                                    <div class="fw-medium">{{ item.seller_name }}</div>
+                                                                </div>
+                                                                <div class="col-6">
+                                                                    <small class="text-muted">Seller ID:</small>
+                                                                    <div class="fw-medium">#{{ item.seller_id }}</div>
+                                                                </div>
+                                                                <div class="col-6">
+                                                                    <small class="text-muted">Quantity:</small>
+                                                                    <div class="fw-medium">{{ item.quantity }} pcs</div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-4 text-end">
+                                                            <div class="mb-2">
+                                                                <small class="text-muted">Unit Price:</small>
+                                                                <div class="h6 mb-1">₱{{ "%.2f"|format(item.price) }}</div>
+                                                            </div>
+                                                            <div class="mb-2">
+                                                                <small class="text-muted">Total Price:</small>
+                                                                <div class="h5 text-primary mb-0">₱{{ "%.2f"|format(item.total_price) }}</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                             {% endfor %}
+                                            <div class="border-top pt-3">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <strong class="h6 mb-0">Order Total:</strong>
+                                                    <strong class="h5 text-success mb-0">₱{{ "%.2f"|format(order.total_amount) }}</strong>
+                                                </div>
+                                            </div>
                                         {% else %}
-                                            <p class="text-muted">No items found</p>
+                                            <div class="text-center py-4">
+                                                <i class="bi bi-inbox text-muted" style="font-size: 2rem;"></i>
+                                                <p class="text-muted mt-2">No items found in this order</p>
+                                            </div>
                                         {% endif %}
                                     </div>
                                 </div>
@@ -99,14 +165,20 @@
                         </div>
                     </td>
                     <td>
-                        <strong>₱{{ "%.2f"|format(order.total_price) }}</strong>
+                                                            <strong>₱{{ "%.2f"|format(order.total_amount) }}</strong>
                     </td>
                     <td>
                         <span class="status-badge status-{{ order.status }}">
-                            {% if order.status == 'processed' %}
-                                <i class="bi bi-clock"></i> Processed
+                            {% if order.status == 'pending' %}
+                                <i class="bi bi-hourglass-split"></i> Pending
+                            {% elif order.status == 'processing' %}
+                                <i class="bi bi-gear-fill"></i> Processing
                             {% elif order.status == 'on_delivery' %}
                                 <i class="bi bi-truck"></i> On Delivery
+                            {% elif order.status == 'completed' %}
+                                <i class="bi bi-check-circle-fill"></i> Completed
+                            {% else %}
+                                <i class="bi bi-question-circle"></i> {{ order.status|title }}
                             {% endif %}
                         </span>
                     </td>
@@ -117,14 +189,22 @@
                     </td>
                     <td>
                         <div class="btn-group-vertical btn-group-sm" role="group">
-                            {% if order.status == 'processed' %}
+                            {% if order.status == 'pending' %}
+                                <button type="button" class="btn btn-warning btn-sm" onclick="updateOrderStatus({{ order.id }}, 'processing')">
+                                    <i class="bi bi-gear-fill"></i> Start Processing
+                                </button>
+                            {% elif order.status == 'processing' %}
                                 <button type="button" class="btn btn-info btn-sm" onclick="updateOrderStatus({{ order.id }}, 'on_delivery')">
                                     <i class="bi bi-truck"></i> Mark for Delivery
                                 </button>
                             {% elif order.status == 'on_delivery' %}
-                                <button type="button" class="btn btn-success btn-sm" onclick="updateOrderStatus({{ order.id }}, 'processed')">
-                                    <i class="bi bi-arrow-counterclockwise"></i> Back to Processed
+                                <button type="button" class="btn btn-success btn-sm" onclick="updateOrderStatus({{ order.id }}, 'completed')">
+                                    <i class="bi bi-check-circle-fill"></i> Mark Completed
                                 </button>
+                            {% elif order.status == 'completed' %}
+                                <span class="text-success small">
+                                    <i class="bi bi-check-circle-fill"></i> Order Completed
+                                </span>
                             {% endif %}
                         </div>
                     </td>

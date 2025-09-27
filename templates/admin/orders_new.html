@@ -1,0 +1,457 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Orders Management - Admin Panel{% endblock %}
+{% block page_title %}Orders Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-0">Order Management</h4>
+        <p class="text-muted">Manage customer orders and delivery status</p>
+    </div>
+    <div class="btn-group" role="group">
+        <a href="{{ url_for('admin_orders', status='all') }}" 
+           class="btn {% if current_filter == 'all' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+            <i class="bi bi-list-ul me-1"></i> All Orders
+        </a>
+        <a href="{{ url_for('admin_orders', status='pending') }}" 
+           class="btn {% if current_filter == 'pending' %}btn-warning{% else %}btn-outline-warning{% endif %}">
+            <i class="bi bi-clock me-1"></i> Pending
+        </a>
+        <a href="{{ url_for('admin_orders', status='processing') }}" 
+           class="btn {% if current_filter == 'processing' %}btn-info{% else %}btn-outline-info{% endif %}">
+            <i class="bi bi-gear me-1"></i> Processing
+        </a>
+        <a href="{{ url_for('admin_orders', status='on_delivery') }}" 
+           class="btn {% if current_filter == 'on_delivery' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+            <i class="bi bi-truck me-1"></i> On Delivery
+        </a>
+        <a href="{{ url_for('admin_orders', status='completed') }}" 
+           class="btn {% if current_filter == 'completed' %}btn-success{% else %}btn-outline-success{% endif %}">
+            <i class="bi bi-check-circle me-1"></i> Completed
+        </a>
+    </div>
+</div>
+
+{% if orders %}
+<div class="admin-table">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>Order Info</th>
+                    <th>Customer</th>
+                    <th>Products</th>
+                    <th>Quantity</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr id="order-{{ order.id }}">
+                    <td>
+                        <div>
+                            <strong class="text-primary">#{{ order.id }}</strong>
+                            {% if order.order_number %}
+                                <br><small class="text-muted">{{ order.order_number }}</small>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="me-3">
+                                {% if order.face_photo_front %}
+                                    <img src="{{ order.face_photo_front }}" alt="Customer" 
+                                         class="rounded-circle border" 
+                                         style="width: 45px; height: 45px; object-fit: cover;">
+                                {% else %}
+                                    <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center" 
+                                         style="width: 45px; height: 45px;">
+                                        <i class="bi bi-person text-white"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <div class="fw-bold">{{ order.customer_name or 'Anonymous' }}</div>
+                                <small class="text-muted">
+                                    <i class="bi bi-phone me-1"></i>{{ order.customer_phone or 'No phone' }}
+                                </small>
+                                {% if order.shipping_address %}
+                                <br><small class="text-muted">
+                                    <i class="bi bi-geo-alt me-1"></i>{{ order.shipping_address[:50] }}{% if order.shipping_address|length > 50 %}...{% endif %}
+                                </small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            {% if order.product_images and order.product_images[0] %}
+                                <img src="{{ order.product_images[0] }}" alt="Product" 
+                                     class="rounded me-2" 
+                                     style="width: 40px; height: 40px; object-fit: cover;">
+                            {% else %}
+                                <div class="bg-light rounded d-flex align-items-center justify-content-center me-2" 
+                                     style="width: 40px; height: 40px;">
+                                    <i class="bi bi-image text-muted"></i>
+                                </div>
+                            {% endif %}
+                            <div>
+                                {% if order.product_names %}
+                                    <div class="fw-bold">{{ order.product_names[0] }}</div>
+                                    {% if order.product_names|length > 1 %}
+                                        <small class="text-info">+{{ order.product_names|length - 1 }} more items</small>
+                                    {% endif %}
+                                {% else %}
+                                    <div class="text-muted">No products</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge bg-secondary fs-6">{{ order.total_quantity or 0 }}</span>
+                    </td>
+                    <td>
+                        <strong class="text-success">{{ order.total_amount_formatted or "₱0.00" }}</strong>
+                    </td>
+                    <td>
+                        <span class="status-badge status-{{ order.status }}">
+                            {% if order.status == 'pending' %}
+                                <i class="bi bi-clock me-1"></i>Pending
+                            {% elif order.status == 'processing' %}
+                                <i class="bi bi-gear me-1"></i>Processing
+                            {% elif order.status == 'on_delivery' %}
+                                <i class="bi bi-truck me-1"></i>On Delivery
+                            {% elif order.status == 'completed' %}
+                                <i class="bi bi-check-circle me-1"></i>Completed
+                            {% elif order.status == 'cancelled' %}
+                                <i class="bi bi-x-circle me-1"></i>Cancelled
+                            {% else %}
+                                <i class="bi bi-question-circle me-1"></i>{{ order.status|title }}
+                            {% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="text-muted small">{{ order.created_at_formatted or order.created_at }}</div>
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm" role="group">
+                            {% if order.status == 'pending' %}
+                                <button class="btn btn-outline-info" 
+                                        onclick="updateOrderStatus({{ order.id }}, 'processing')"
+                                        title="Mark as Processing">
+                                    <i class="bi bi-gear"></i>
+                                </button>
+                            {% elif order.status == 'processing' %}
+                                <button class="btn btn-outline-primary" 
+                                        onclick="updateOrderStatus({{ order.id }}, 'on_delivery')"
+                                        title="Mark as On Delivery">
+                                    <i class="bi bi-truck"></i>
+                                </button>
+                            {% elif order.status == 'on_delivery' %}
+                                <button class="btn btn-outline-success" 
+                                        onclick="updateOrderStatus({{ order.id }}, 'completed')"
+                                        title="Mark as Completed">
+                                    <i class="bi bi-check-circle"></i>
+                                </button>
+                            {% endif %}
+                            
+                            {% if order.status in ['pending', 'processing', 'on_delivery'] %}
+                                <button class="btn btn-outline-danger" 
+                                        onclick="updateOrderStatus({{ order.id }}, 'cancelled')"
+                                        title="Cancel Order">
+                                    <i class="bi bi-x-circle"></i>
+                                </button>
+                            {% endif %}
+                            
+                            <button class="btn btn-outline-secondary" 
+                                    onclick="viewOrderDetails({{ order.id }})"
+                                    title="View Details">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Order Statistics -->
+<div class="row mt-4">
+    <div class="col-md-3">
+        <div class="stat-card text-center">
+            <div class="stat-number text-primary">{{ orders|length }}</div>
+            <div class="text-muted">
+                {% if current_filter == 'all' %}Total Orders{% else %}{{ current_filter|title }} Orders{% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card text-center">
+            <div class="stat-number text-warning">{{ orders|selectattr('status', 'eq', 'pending')|list|length }}</div>
+            <div class="text-muted">Pending</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card text-center">
+            <div class="stat-number text-info">{{ orders|selectattr('status', 'eq', 'processing')|list|length }}</div>
+            <div class="text-muted">Processing</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card text-center">
+            <div class="stat-number text-success">{{ orders|selectattr('status', 'eq', 'completed')|list|length }}</div>
+            <div class="text-muted">Completed</div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<div class="text-center py-5">
+    <div class="fs-1 text-muted mb-3">📦</div>
+    <h4 class="text-muted">No orders found</h4>
+    {% if current_filter != 'all' %}
+        <p class="text-muted">No orders found with status: {{ current_filter }}</p>
+        <a href="{{ url_for('admin_orders') }}" class="btn btn-primary">View All Orders</a>
+    {% else %}
+        <p class="text-muted">Orders will appear here when customers start placing orders.</p>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Order Details Modal -->
+<div class="modal fade" id="orderDetailsModal" tabindex="-1" aria-labelledby="orderDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="orderDetailsModalLabel">
+                    <i class="bi bi-box-seam me-2"></i>Order Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="orderDetailsContent">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<style>
+/* Enhanced status badges */
+.status-pending {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.status-processing {
+    background: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+.status-on_delivery {
+    background: #cce5ff;
+    color: #004085;
+    border: 1px solid #99d1ff;
+}
+
+.status-completed {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.status-cancelled {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.status-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Hover effects for action buttons */
+.btn-group-sm .btn {
+    transition: all 0.2s ease;
+}
+
+.btn-group-sm .btn:hover {
+    transform: translateY(-1px);
+}
+
+/* Loading states */
+.updating-status {
+    opacity: 0.6;
+    pointer-events: none;
+}
+</style>
+
+<script>
+// Status update functionality
+async function updateOrderStatus(orderId, newStatus) {
+    // Get the row element
+    const row = document.getElementById(`order-${orderId}`);
+    if (!row) return;
+    
+    // Add loading state
+    row.classList.add('updating-status');
+    
+    // Status transition confirmations
+    const confirmMessages = {
+        'processing': 'Mark this order as being processed?',
+        'on_delivery': 'Mark this order as out for delivery?',
+        'completed': 'Mark this order as completed?',
+        'cancelled': 'Are you sure you want to cancel this order?'
+    };
+    
+    if (confirmMessages[newStatus]) {
+        if (!confirm(confirmMessages[newStatus])) {
+            row.classList.remove('updating-status');
+            return;
+        }
+    }
+    
+    try {
+        const response = await fetch(`/admin/orders/update_status/${orderId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ status: newStatus })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Show success message
+            showAlert('success', data.message || `Order #${orderId} updated successfully!`);
+            
+            // Refresh the page to show updated status
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            // Show error message
+            showAlert('danger', data.error || 'Failed to update order status');
+            row.classList.remove('updating-status');
+        }
+    } catch (error) {
+        console.error('Error updating order status:', error);
+        showAlert('danger', 'Network error occurred while updating order status');
+        row.classList.remove('updating-status');
+    }
+}
+
+// View order details
+function viewOrderDetails(orderId) {
+    const modal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
+    const modalContent = document.getElementById('orderDetailsContent');
+    
+    // Find order data from the table
+    const row = document.getElementById(`order-${orderId}`);
+    if (!row) {
+        showAlert('danger', 'Order not found');
+        return;
+    }
+    
+    // Extract order information from the table row
+    const cells = row.cells;
+    const orderInfo = {
+        id: orderId,
+        customer: cells[1].querySelector('.fw-bold').textContent,
+        phone: cells[1].querySelector('.bi-phone').parentNode.textContent.replace('📞', '').trim(),
+        products: cells[2].querySelector('.fw-bold').textContent,
+        quantity: cells[3].querySelector('.badge').textContent,
+        total: cells[4].querySelector('strong').textContent,
+        status: cells[5].querySelector('.status-badge').textContent.trim(),
+        date: cells[6].textContent.trim()
+    };
+    
+    modalContent.innerHTML = `
+        <div class="row">
+            <div class="col-md-6">
+                <h6 class="text-primary mb-3"><i class="bi bi-box-seam me-2"></i>Order Information</h6>
+                <table class="table table-borderless table-sm">
+                    <tr><td><strong>Order ID:</strong></td><td>#${orderInfo.id}</td></tr>
+                    <tr><td><strong>Status:</strong></td><td>${orderInfo.status}</td></tr>
+                    <tr><td><strong>Date:</strong></td><td>${orderInfo.date}</td></tr>
+                    <tr><td><strong>Total Amount:</strong></td><td class="text-success fw-bold">${orderInfo.total}</td></tr>
+                    <tr><td><strong>Quantity:</strong></td><td>${orderInfo.quantity} items</td></tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <h6 class="text-primary mb-3"><i class="bi bi-person me-2"></i>Customer Information</h6>
+                <table class="table table-borderless table-sm">
+                    <tr><td><strong>Name:</strong></td><td>${orderInfo.customer}</td></tr>
+                    <tr><td><strong>Phone:</strong></td><td>${orderInfo.phone}</td></tr>
+                    <tr><td><strong>Products:</strong></td><td>${orderInfo.products}</td></tr>
+                </table>
+            </div>
+        </div>
+        <div class="alert alert-info mt-3">
+            <i class="bi bi-info-circle me-2"></i>
+            Use the action buttons in the orders table to update the order status.
+        </div>
+    `;
+    
+    modal.show();
+}
+
+// Alert system
+function showAlert(type, message) {
+    // Remove existing alerts
+    const existingAlerts = document.querySelectorAll('.alert-dismissible');
+    existingAlerts.forEach(alert => alert.remove());
+    
+    // Create new alert
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    // Insert at the top of the content
+    const content = document.querySelector('.container-fluid') || document.body;
+    content.insertBefore(alertDiv, content.firstChild);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Bootstrap tooltips if available
+    if (typeof bootstrap !== 'undefined') {
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    }
+});
+</script>
+{% endblock %}

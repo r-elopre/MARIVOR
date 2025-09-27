@@ -607,27 +607,36 @@ class SupabaseClient:
             return {'success': False, 'error': str(e)}
     
     def get_orders_by_status(self, status: str) -> List[Dict[str, Any]]:
-        """Get orders by status"""
+        """Get orders by status - Fetch all columns from orders table"""
         try:
-            response = self.client.table('orders').select('*, users(username, phone_number)').eq('status', status).order('created_at', desc=True).execute()
+            # Select all specific columns from orders table, filter by status
+            response = self.client.table('orders').select(
+                'id, created_at, user_id, order_number, status, total_amount, currency, '
+                'customer_name, customer_phone, shipping_address, items, face_photo_front'
+            ).eq('status', status).order('created_at', desc=True).execute()
             return response.data if response.data else []
         except Exception as e:
             print(f"Error getting orders by status: {e}")
             return []
     
     def get_all_orders(self) -> List[Dict[str, Any]]:
-        """Get all orders with user information"""
+        """Get all orders - Fetch all columns from orders table"""
         try:
-            response = self.client.table('orders').select('*, users(username, phone_number)').order('created_at', desc=True).execute()
+            # Select all specific columns from orders table
+            response = self.client.table('orders').select(
+                'id, created_at, user_id, order_number, status, total_amount, currency, '
+                'customer_name, customer_phone, shipping_address, items, face_photo_front'
+            ).order('created_at', desc=True).execute()
             return response.data if response.data else []
         except Exception as e:
             print(f"Error getting all orders: {e}")
             return []
     
     def update_order_status(self, order_id: int, status: str) -> bool:
-        """Update order status"""
+        """Update order status - Enhanced to support all status values"""
         try:
-            valid_statuses = ['processed', 'on_delivery']
+            # Updated valid statuses to match our progression system
+            valid_statuses = ['pending', 'processing', 'on_delivery', 'completed', 'cancelled']
             if status not in valid_statuses:
                 print(f"Invalid status: {status}. Valid statuses: {valid_statuses}")
                 return False

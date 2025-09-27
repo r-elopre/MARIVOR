@@ -401,3 +401,40 @@ footer {
 .badge.bg-success {
     background-color: var(--success-color) !important;
 }
+
+/* Admin Orders - Status Badges */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    border-radius: 0.375rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.status-badge.status-pending {
+    background-color: #fff3cd;
+    color: #664d03;
+    border: 1px solid #ffecb5;
+}
+
+.status-badge.status-processing {
+    background-color: #cff4fc;
+    color: #087990;
+    border: 1px solid #9eeaf9;
+}
+
+.status-badge.status-on_delivery {
+    background-color: #d1e7dd;
+    color: #0a3622;
+    border: 1px solid #a3cfbb;
+}
+
+.status-badge.status-completed {
+    background-color: #f8d7da;
+    color: #58151c;
+    border: 1px solid #f1aeb5;
+}
