@@ -942,15 +942,19 @@ def admin_dashboard():
         
         # Get statistics
         all_products = supabase_client.get_all_products()
-        processed_orders = supabase_client.get_orders_by_status('processed')
+        pending_orders = supabase_client.get_orders_by_status('pending')
+        processing_orders = supabase_client.get_orders_by_status('processing')
         delivery_orders = supabase_client.get_orders_by_status('on_delivery')
+        completed_orders = supabase_client.get_orders_by_status('completed')
         
         stats = {
             'total_products': len(all_products),
             'fish_products': len([p for p in all_products if p['category'] == 'Fish']),
             'vegetable_products': len([p for p in all_products if p['category'] == 'Vegetables']),
-            'processed_orders': len(processed_orders),
-            'delivery_orders': len(delivery_orders)
+            'pending_orders': len(pending_orders),
+            'processing_orders': len(processing_orders),
+            'delivery_orders': len(delivery_orders),
+            'completed_orders': len(completed_orders)
         }
         
         return render_template('admin/dashboard.html', stats=stats)

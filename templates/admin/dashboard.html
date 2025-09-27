@@ -33,8 +33,46 @@
     <div class="col-md-3 mb-4">
         <div class="stat-card text-center">
             <i class="bi bi-clock-history text-warning mb-3" style="font-size: 2rem;"></i>
-            <div class="stat-number">{{ stats.processed_orders or 0 }}</div>
+            <div class="stat-number">{{ stats.pending_orders or 0 }}</div>
             <div class="text-muted">Pending Orders</div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Processing Orders -->
+    <div class="col-md-3 mb-4">
+        <div class="stat-card text-center">
+            <i class="bi bi-gear-fill text-info mb-3" style="font-size: 2rem;"></i>
+            <div class="stat-number">{{ stats.processing_orders or 0 }}</div>
+            <div class="text-muted">Processing Orders</div>
+        </div>
+    </div>
+    
+    <!-- On Delivery Orders -->
+    <div class="col-md-3 mb-4">
+        <div class="stat-card text-center">
+            <i class="bi bi-truck text-primary mb-3" style="font-size: 2rem;"></i>
+            <div class="stat-number">{{ stats.delivery_orders or 0 }}</div>
+            <div class="text-muted">On Delivery</div>
+        </div>
+    </div>
+    
+    <!-- Completed Orders -->
+    <div class="col-md-3 mb-4">
+        <div class="stat-card text-center">
+            <i class="bi bi-check-circle-fill text-success mb-3" style="font-size: 2rem;"></i>
+            <div class="stat-number">{{ stats.completed_orders or 0 }}</div>
+            <div class="text-muted">Completed Orders</div>
+        </div>
+    </div>
+    
+    <!-- Total Active Orders -->
+    <div class="col-md-3 mb-4">
+        <div class="stat-card text-center">
+            <i class="bi bi-list-ul text-secondary mb-3" style="font-size: 2rem;"></i>
+            <div class="stat-number">{{ (stats.pending_orders or 0) + (stats.processing_orders or 0) + (stats.delivery_orders or 0) }}</div>
+            <div class="text-muted">Total Active Orders</div>
         </div>
     </div>
 </div>
@@ -50,9 +88,9 @@
                 <span class="badge bg-info fs-6">{{ stats.delivery_orders or 0 }}</span>
             </div>
             <div class="progress mb-3">
-                {% set total_orders = (stats.processed_orders or 0) + (stats.delivery_orders or 0) %}
-                {% if total_orders > 0 %}
-                    {% set delivery_percentage = ((stats.delivery_orders or 0) / total_orders) * 100 %}
+                {% set total_active_orders = (stats.pending_orders or 0) + (stats.processing_orders or 0) + (stats.delivery_orders or 0) %}
+                {% if total_active_orders > 0 %}
+                    {% set delivery_percentage = ((stats.delivery_orders or 0) / total_active_orders) * 100 %}
                 {% else %}
                     {% set delivery_percentage = 0 %}
                 {% endif %}
