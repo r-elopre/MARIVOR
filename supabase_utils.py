@@ -631,6 +631,19 @@ class SupabaseClient:
         except Exception as e:
             print(f"Error getting all orders: {e}")
             return []
+
+    def get_active_orders(self) -> List[Dict[str, Any]]:
+        """Get active orders (excluding completed ones) - For 'All Orders' view"""
+        try:
+            # Select orders that are not completed (pending, processing, on_delivery)
+            response = self.client.table('orders').select(
+                'id, created_at, user_id, order_number, status, total_amount, currency, '
+                'customer_name, customer_phone, shipping_address, items, face_photo_front'
+            ).neq('status', 'completed').order('created_at', desc=True).execute()
+            return response.data if response.data else []
+        except Exception as e:
+            print(f"Error getting active orders: {e}")
+            return []
     
     def update_order_status(self, order_id: int, status: str) -> bool:
         """Update order status - Enhanced to support all status values"""

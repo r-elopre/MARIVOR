@@ -487,3 +487,138 @@ footer {
         font-size: 1.1rem;
     }
 }
+
+/* Enhanced Desktop Admin Orders Table */
+.admin-orders-table {
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.admin-orders-table thead th {
+    background: linear-gradient(135deg, #343a40 0%, #495057 100%);
+    border: none;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.85rem;
+    padding: 1.2rem 0.75rem;
+}
+
+.admin-orders-table tbody .order-row {
+    border-bottom: 1px solid #e9ecef;
+    transition: all 0.2s ease;
+}
+
+.admin-orders-table tbody .order-row:hover {
+    background-color: #f8f9fa;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.admin-orders-table tbody td {
+    padding: 1.2rem 0.75rem;
+    vertical-align: middle;
+    border-color: #e9ecef;
+}
+
+.order-number {
+    min-width: 150px;
+}
+
+.order-number strong {
+    font-size: 0.95rem;
+    color: #0d6efd;
+}
+
+.customer-info {
+    min-width: 200px;
+}
+
+.customer-avatar {
+    flex-shrink: 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.shipping-address {
+    max-width: 280px;
+}
+
+.shipping-address .address-text {
+    line-height: 1.4;
+    font-size: 0.9rem;
+}
+
+.total-amount .h6 {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.status-badge {
+    font-weight: 600;
+    font-size: 0.8rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    min-width: 110px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.order-date {
+    min-width: 90px;
+}
+
+.action-buttons {
+    min-width: 100px;
+}
+
+.action-buttons .btn {
+    font-weight: 500;
+    border-radius: 0.4rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.action-buttons .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Enhanced status badge colors */
+.status-badge.status-pending {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    color: #856404;
+    border: 1px solid #ffecb5;
+}
+
+.status-badge.status-processing {
+    background: linear-gradient(135deg, #cff4fc 0%, #74b9ff 100%);
+    color: #055160;
+    border: 1px solid #9eeaf9;
+}
+
+.status-badge.status-on_delivery {
+    background: linear-gradient(135deg, #d1e7dd 0%, #00b894 100%);
+    color: #0f5132;
+    border: 1px solid #a3cfbb;
+}
+
+.status-badge.status-completed {
+    background: linear-gradient(135deg, #d4edda 0%, #00b894 100%);
+    color: #0a3622;
+    border: 1px solid #a3d9a4;
+}
+
+/* Table responsive enhancements */
+@media (min-width: 992px) {
+    .admin-table .table-responsive {
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+    
+    .admin-orders-table {
+        margin-bottom: 0;
+    }
+}

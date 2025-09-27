@@ -12,7 +12,7 @@
     <div class="btn-group" role="group">
         <a href="{{ url_for('admin_orders', status='all') }}" 
            class="btn {% if current_filter == 'all' %}btn-primary{% else %}btn-outline-primary{% endif %}">
-            All Orders
+            Active Orders
         </a>
         <a href="{{ url_for('admin_orders', status='pending') }}" 
            class="btn {% if current_filter == 'pending' %}btn-warning{% else %}btn-outline-warning{% endif %}">
@@ -37,106 +37,118 @@
 <div class="admin-table">
     <!-- Desktop Table View -->
     <div class="table-responsive d-none d-lg-block">
-        <table class="table table-hover mb-0">
+        <table class="table table-hover align-middle mb-0 admin-orders-table">
             <thead class="table-dark">
                 <tr>
-                    <th>Order Number</th>
-                    <th>Customer Info</th>
-                    <th>Shipping Address</th>
-                    <th>Items</th>
-                    <th>Total</th>
-                    <th>Status</th>
-                    <th>Date</th>
-                    <th>Actions</th>
+                    <th width="18%" class="ps-3">Order Number</th>
+                    <th width="20%">Customer Info</th>
+                    <th width="25%">Shipping Address</th>
+                    <th width="8%" class="text-center">Items</th>
+                    <th width="10%" class="text-end">Total</th>
+                    <th width="12%" class="text-center">Status</th>
+                    <th width="10%">Date</th>
+                    <th width="12%" class="text-center pe-3">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {% for order in orders %}
-                <tr>
-                    <td>
-                        <strong>{{ order.order_number|default('#' ~ order.id) }}</strong>
+                <tr class="order-row">
+                    <td class="ps-3">
+                        <div class="order-number">
+                            <strong class="text-primary">{{ order.order_number|default('#' ~ order.id) }}</strong>
+                            <div class="small text-muted">#{{ order.id }}</div>
+                        </div>
                     </td>
                     <td>
-                        <div class="d-flex align-items-center">
+                        <div class="d-flex align-items-center customer-info">
                             {% if order.face_photo_front %}
-                                <img src="{{ order.face_photo_front }}" alt="Customer" class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                                <img src="{{ order.face_photo_front }}" alt="Customer" class="rounded-circle me-3 customer-avatar" style="width: 45px; height: 45px; object-fit: cover; border: 2px solid #e9ecef;">
                             {% else %}
-                                <div class="bg-secondary rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                <div class="bg-secondary rounded-circle me-3 d-flex align-items-center justify-content-center customer-avatar" style="width: 45px; height: 45px; border: 2px solid #e9ecef;">
                                     <i class="bi bi-person text-white"></i>
                                 </div>
                             {% endif %}
                             <div>
                                 {% if order.customer_name %}
-                                    <div class="fw-medium">{{ order.customer_name }}</div>
+                                    <div class="fw-semibold mb-1">{{ order.customer_name }}</div>
                                 {% else %}
-                                    <div class="fw-medium text-muted">User ID: {{ order.user_id }}</div>
+                                    <div class="fw-semibold text-muted mb-1">User ID: {{ order.user_id }}</div>
                                 {% endif %}
                                 {% if order.customer_phone and order.customer_phone != 'None' %}
-                                    <small class="text-muted">
-                                        <i class="bi bi-telephone"></i> {{ order.customer_phone }}
+                                    <small class="text-muted d-flex align-items-center">
+                                        <i class="bi bi-telephone me-1"></i> {{ order.customer_phone }}
                                     </small>
                                 {% endif %}
                             </div>
                         </div>
                     </td>
                     <td>
-                        <div class="small">
+                        <div class="shipping-address">
                             {% if order.shipping_address %}
-                                <i class="bi bi-geo-alt text-primary"></i>
-                                {{ order.shipping_address[:50] }}{% if order.shipping_address|length > 50 %}...{% endif %}
-                                <button type="button" class="btn btn-link btn-sm p-0 ms-1" data-bs-toggle="tooltip" title="{{ order.shipping_address }}">
-                                    <i class="bi bi-eye"></i>
-                                </button>
+                                <div class="d-flex align-items-start">
+                                    <i class="bi bi-geo-alt text-primary me-2 mt-1 flex-shrink-0"></i>
+                                    <div class="address-text">
+                                        <span class="fw-medium">{{ order.shipping_address[:60] }}{% if order.shipping_address|length > 60 %}...{% endif %}</span>
+                                        {% if order.shipping_address|length > 60 %}
+                                        <button type="button" class="btn btn-link btn-sm p-0 ms-2 text-decoration-none" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ order.shipping_address }}">
+                                            <i class="bi bi-eye-fill text-info"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
                             {% else %}
-                                <span class="text-muted">No address provided</span>
+                                <span class="text-muted fst-italic">No address provided</span>
                             {% endif %}
                         </div>
                     </td>
-                    <td>
-                        <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#itemsModal{{ order.id }}">
-                            <i class="bi bi-list"></i> View Items
+                    <td class="text-center">
+                        <button type="button" class="btn btn-outline-info btn-sm px-3" data-bs-toggle="modal" data-bs-target="#itemsModal{{ order.id }}">
+                            <i class="bi bi-list-ul me-1"></i> View
                         </button>
                     </td>
-                    <td>
-                        <strong>₱{{ "%.2f"|format(order.total_amount) }}</strong>
+                    <td class="text-end">
+                        <div class="total-amount">
+                            <strong class="h6 mb-0 text-success">₱{{ "%.2f"|format(order.total_amount) }}</strong>
+                        </div>
                     </td>
-                    <td>
+                    <td class="text-center">
                         <span class="status-badge status-{{ order.status }}">
                             {% if order.status == 'pending' %}
-                                <i class="bi bi-hourglass-split"></i> Pending
+                                <i class="bi bi-hourglass-split me-1"></i> Pending
                             {% elif order.status == 'processing' %}
-                                <i class="bi bi-gear-fill"></i> Processing
+                                <i class="bi bi-gear-fill me-1"></i> Processing
                             {% elif order.status == 'on_delivery' %}
-                                <i class="bi bi-truck"></i> On Delivery
+                                <i class="bi bi-truck me-1"></i> On Delivery
                             {% elif order.status == 'completed' %}
-                                <i class="bi bi-check-circle-fill"></i> Completed
+                                <i class="bi bi-check-circle-fill me-1"></i> Completed
                             {% else %}
-                                <i class="bi bi-question-circle"></i> {{ order.status|title }}
+                                <i class="bi bi-question-circle me-1"></i> {{ order.status|title }}
                             {% endif %}
                         </span>
                     </td>
                     <td>
-                        {{ order.created_at[:10] }}
-                        <br>
-                        <small class="text-muted">{{ order.created_at[11:16] }}</small>
+                        <div class="order-date">
+                            <div class="fw-medium">{{ order.created_at[:10] }}</div>
+                            <small class="text-muted">{{ order.created_at[11:16] }}</small>
+                        </div>
                     </td>
-                    <td>
-                        <div class="btn-group-vertical btn-group-sm" role="group">
+                    <td class="text-center pe-3">
+                        <div class="action-buttons">
                             {% if order.status == 'pending' %}
-                                <button type="button" class="btn btn-warning btn-sm" onclick="updateOrderStatus({{ order.id }}, 'processing')">
-                                    <i class="bi bi-gear-fill"></i> Start Processing
+                                <button type="button" class="btn btn-warning btn-sm px-3" onclick="updateOrderStatus({{ order.id }}, 'processing')">
+                                    <i class="bi bi-gear-fill me-1"></i> Process
                                 </button>
                             {% elif order.status == 'processing' %}
-                                <button type="button" class="btn btn-info btn-sm" onclick="updateOrderStatus({{ order.id }}, 'on_delivery')">
-                                    <i class="bi bi-truck"></i> Mark for Delivery
+                                <button type="button" class="btn btn-info btn-sm px-3" onclick="updateOrderStatus({{ order.id }}, 'on_delivery')">
+                                    <i class="bi bi-truck me-1"></i> Deliver
                                 </button>
                             {% elif order.status == 'on_delivery' %}
-                                <button type="button" class="btn btn-success btn-sm" onclick="updateOrderStatus({{ order.id }}, 'completed')">
-                                    <i class="bi bi-check-circle-fill"></i> Mark Completed
+                                <button type="button" class="btn btn-success btn-sm px-3" onclick="updateOrderStatus({{ order.id }}, 'completed')">
+                                    <i class="bi bi-check-circle-fill me-1"></i> Complete
                                 </button>
                             {% elif order.status == 'completed' %}
-                                <span class="text-success small">
-                                    <i class="bi bi-check-circle-fill"></i> Order Completed
+                                <span class="text-success small fw-medium">
+                                    <i class="bi bi-check-circle-fill me-1"></i> Done
                                 </span>
                             {% endif %}
                         </div>
@@ -341,9 +353,9 @@
     <h5 class="mt-3 text-muted">No Orders Found</h5>
     <p class="text-muted">
         {% if current_filter == 'all' %}
-            No orders have been placed yet.
+            No active orders requiring attention.
         {% elif current_filter == 'pending' %}
-            No pending orders waiting for action.
+            No pending orders waiting for processing.
         {% elif current_filter == 'processing' %}
             No orders are currently being processed.
         {% elif current_filter == 'on_delivery' %}

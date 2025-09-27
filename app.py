@@ -971,7 +971,8 @@ def admin_orders():
         
         # Get orders based on filter
         if status_filter == 'all':
-            orders = supabase_client.get_all_orders()
+            # For "All Orders", exclude completed orders (only show active orders)
+            orders = supabase_client.get_active_orders()
         else:
             orders = supabase_client.get_orders_by_status(status_filter)
         
