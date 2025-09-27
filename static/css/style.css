@@ -438,3 +438,52 @@ footer {
     color: #58151c;
     border: 1px solid #f1aeb5;
 }
+
+/* Responsive Admin Orders Table */
+.order-card-mobile {
+    border: 1px solid #dee2e6;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.order-card-mobile .card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+/* Make filter buttons responsive */
+@media (max-width: 768px) {
+    .btn-group {
+        flex-wrap: wrap;
+    }
+    
+    .btn-group .btn {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .status-badge.small {
+        font-size: 0.65rem;
+        padding: 0.25rem 0.5rem;
+    }
+}
+
+/* Extra small screens */
+@media (max-width: 576px) {
+    .order-card-mobile .card-body {
+        padding: 1rem !important;
+    }
+    
+    .btn-group .btn {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.4rem;
+    }
+    
+    .display-6 {
+        font-size: 1.25rem;
+    }
+    
+    .h4 {
+        font-size: 1.1rem;
+    }
+}

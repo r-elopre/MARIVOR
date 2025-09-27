@@ -35,7 +35,8 @@
 
 {% if orders %}
 <div class="admin-table">
-    <div class="table-responsive">
+    <!-- Desktop Table View -->
+    <div class="table-responsive d-none d-lg-block">
         <table class="table table-hover mb-0">
             <thead class="table-dark">
                 <tr>
@@ -95,77 +96,9 @@
                         <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#itemsModal{{ order.id }}">
                             <i class="bi bi-list"></i> View Items
                         </button>
-                        
-                        <!-- Items Modal -->
-                        <div class="modal fade" id="itemsModal{{ order.id }}" tabindex="-1">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title">Order #{{ order.id }} Items</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                    </div>
-                                    <div class="modal-body">
-                                        {% if order['items'] %}
-                                            {% for item in order['items'] %}
-                                            <div class="card mb-3">
-                                                <div class="card-body">
-                                                    <div class="row">
-                                                        <div class="col-md-8">
-                                                            <h6 class="card-title mb-2">
-                                                                <i class="bi bi-box"></i> {{ item.name }}
-                                                            </h6>
-                                                            <div class="row g-2">
-                                                                <div class="col-6">
-                                                                    <small class="text-muted">Product ID:</small>
-                                                                    <div class="fw-medium">#{{ item.product_id }}</div>
-                                                                </div>
-                                                                <div class="col-6">
-                                                                    <small class="text-muted">Seller:</small>
-                                                                    <div class="fw-medium">{{ item.seller_name }}</div>
-                                                                </div>
-                                                                <div class="col-6">
-                                                                    <small class="text-muted">Seller ID:</small>
-                                                                    <div class="fw-medium">#{{ item.seller_id }}</div>
-                                                                </div>
-                                                                <div class="col-6">
-                                                                    <small class="text-muted">Quantity:</small>
-                                                                    <div class="fw-medium">{{ item.quantity }} pcs</div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-md-4 text-end">
-                                                            <div class="mb-2">
-                                                                <small class="text-muted">Unit Price:</small>
-                                                                <div class="h6 mb-1">₱{{ "%.2f"|format(item.price) }}</div>
-                                                            </div>
-                                                            <div class="mb-2">
-                                                                <small class="text-muted">Total Price:</small>
-                                                                <div class="h5 text-primary mb-0">₱{{ "%.2f"|format(item.total_price) }}</div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            {% endfor %}
-                                            <div class="border-top pt-3">
-                                                <div class="d-flex justify-content-between align-items-center">
-                                                    <strong class="h6 mb-0">Order Total:</strong>
-                                                    <strong class="h5 text-success mb-0">₱{{ "%.2f"|format(order.total_amount) }}</strong>
-                                                </div>
-                                            </div>
-                                        {% else %}
-                                            <div class="text-center py-4">
-                                                <i class="bi bi-inbox text-muted" style="font-size: 2rem;"></i>
-                                                <p class="text-muted mt-2">No items found in this order</p>
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
                     </td>
                     <td>
-                                                            <strong>₱{{ "%.2f"|format(order.total_amount) }}</strong>
+                        <strong>₱{{ "%.2f"|format(order.total_amount) }}</strong>
                     </td>
                     <td>
                         <span class="status-badge status-{{ order.status }}">
@@ -213,6 +146,194 @@
             </tbody>
         </table>
     </div>
+
+    <!-- Mobile/Tablet Card View -->
+    <div class="d-lg-none">
+        {% for order in orders %}
+        <div class="card mb-3 order-card-mobile">
+            <div class="card-header d-flex justify-content-between align-items-center py-2">
+                <div>
+                    <small class="text-muted">Order Number</small>
+                    <div class="fw-bold">{{ order.order_number|default('#' ~ order.id) }}</div>
+                </div>
+                <span class="status-badge status-{{ order.status }} small">
+                    {% if order.status == 'pending' %}
+                        <i class="bi bi-hourglass-split"></i> Pending
+                    {% elif order.status == 'processing' %}
+                        <i class="bi bi-gear-fill"></i> Processing
+                    {% elif order.status == 'on_delivery' %}
+                        <i class="bi bi-truck"></i> On Delivery
+                    {% elif order.status == 'completed' %}
+                        <i class="bi bi-check-circle-fill"></i> Completed
+                    {% else %}
+                        <i class="bi bi-question-circle"></i> {{ order.status|title }}
+                    {% endif %}
+                </span>
+            </div>
+            <div class="card-body p-3">
+                <!-- Customer Info Row -->
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <div class="d-flex align-items-center">
+                            {% if order.face_photo_front %}
+                                <img src="{{ order.face_photo_front }}" alt="Customer" class="rounded-circle me-2" style="width: 32px; height: 32px; object-fit: cover;">
+                            {% else %}
+                                <div class="bg-secondary rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                    <i class="bi bi-person text-white small"></i>
+                                </div>
+                            {% endif %}
+                            <div>
+                                <small class="text-muted">Customer</small>
+                                {% if order.customer_name %}
+                                    <div class="fw-medium small">{{ order.customer_name }}</div>
+                                {% else %}
+                                    <div class="fw-medium text-muted small">User ID: {{ order.user_id }}</div>
+                                {% endif %}
+                                {% if order.customer_phone and order.customer_phone != 'None' %}
+                                    <small class="text-muted">
+                                        <i class="bi bi-telephone"></i> {{ order.customer_phone }}
+                                    </small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Address Row -->
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <small class="text-muted">Shipping Address</small>
+                        {% if order.shipping_address %}
+                            <div class="small">
+                                <i class="bi bi-geo-alt text-primary"></i>
+                                <span class="ms-1">{{ order.shipping_address }}</span>
+                            </div>
+                        {% else %}
+                            <div class="small text-muted">No address provided</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Items Row -->
+                <div class="row mb-3">
+                    <div class="col-12 text-center">
+                        <small class="text-muted d-block mb-2">Items</small>
+                        <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#itemsModal{{ order.id }}">
+                            <i class="bi bi-list"></i> View Items
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Total and Date Row -->
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <small class="text-muted">Total Amount</small>
+                        <div class="h6 mb-0 text-primary">₱{{ "%.2f"|format(order.total_amount) }}</div>
+                    </div>
+                    <div class="col-6 text-end">
+                        <small class="text-muted">Date</small>
+                        <div class="small">{{ order.created_at[:10] }}</div>
+                        <small class="text-muted">{{ order.created_at[11:16] }}</small>
+                    </div>
+                </div>
+
+                <!-- Actions Row -->
+                <div class="row">
+                    <div class="col-12">
+                        {% if order.status == 'pending' %}
+                            <button type="button" class="btn btn-warning btn-sm w-100" onclick="updateOrderStatus({{ order.id }}, 'processing')">
+                                <i class="bi bi-gear-fill"></i> Start Processing
+                            </button>
+                        {% elif order.status == 'processing' %}
+                            <button type="button" class="btn btn-info btn-sm w-100" onclick="updateOrderStatus({{ order.id }}, 'on_delivery')">
+                                <i class="bi bi-truck"></i> Mark for Delivery
+                            </button>
+                        {% elif order.status == 'on_delivery' %}
+                            <button type="button" class="btn btn-success btn-sm w-100" onclick="updateOrderStatus({{ order.id }}, 'completed')">
+                                <i class="bi bi-check-circle-fill"></i> Mark Completed
+                            </button>
+                        {% elif order.status == 'completed' %}
+                            <div class="text-center text-success small">
+                                <i class="bi bi-check-circle-fill"></i> Order Completed
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Items Modals (shared between desktop and mobile) -->
+    {% for order in orders %}
+        <!-- Items Modal -->
+        <div class="modal fade" id="itemsModal{{ order.id }}" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Order #{{ order.id }} Items</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        {% if order['items'] %}
+                            {% for item in order['items'] %}
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <h6 class="card-title mb-2">
+                                                <i class="bi bi-box"></i> {{ item.name }}
+                                            </h6>
+                                            <div class="row g-2">
+                                                <div class="col-6">
+                                                    <small class="text-muted">Product ID:</small>
+                                                    <div class="fw-medium">#{{ item.product_id }}</div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <small class="text-muted">Seller:</small>
+                                                    <div class="fw-medium">{{ item.seller_name }}</div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <small class="text-muted">Seller ID:</small>
+                                                    <div class="fw-medium">#{{ item.seller_id }}</div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <small class="text-muted">Quantity:</small>
+                                                    <div class="fw-medium">{{ item.quantity }} pcs</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 text-end">
+                                            <div class="mb-2">
+                                                <small class="text-muted">Unit Price:</small>
+                                                <div class="h6 mb-1">₱{{ "%.2f"|format(item.price) }}</div>
+                                            </div>
+                                            <div class="mb-2">
+                                                <small class="text-muted">Total Price:</small>
+                                                <div class="h5 text-primary mb-0">₱{{ "%.2f"|format(item.total_price) }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                            <div class="border-top pt-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <strong class="h6 mb-0">Order Total:</strong>
+                                    <strong class="h5 text-success mb-0">₱{{ "%.2f"|format(order.total_amount) }}</strong>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="bi bi-inbox text-muted" style="font-size: 2rem;"></i>
+                                <p class="text-muted mt-2">No items found in this order</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
 </div>
 {% else %}
 <div class="admin-table text-center py-5">
@@ -221,10 +342,14 @@
     <p class="text-muted">
         {% if current_filter == 'all' %}
             No orders have been placed yet.
-        {% elif current_filter == 'processed' %}
-            No processed orders waiting for action.
+        {% elif current_filter == 'pending' %}
+            No pending orders waiting for action.
+        {% elif current_filter == 'processing' %}
+            No orders are currently being processed.
         {% elif current_filter == 'on_delivery' %}
             No orders are currently out for delivery.
+        {% elif current_filter == 'completed' %}
+            No completed orders found.
         {% endif %}
     </p>
     <a href="{{ url_for('admin_dashboard') }}" class="btn btn-primary">
@@ -263,5 +388,13 @@ async function updateOrderStatus(orderId, newStatus) {
         alert('Error updating order status: ' + error.message);
     }
 }
+
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function () {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
 </script>
 {% endblock %}
