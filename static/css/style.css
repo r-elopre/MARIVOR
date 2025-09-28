@@ -501,6 +501,18 @@ footer {
     .order-header .order-id strong {
         font-size: 0.85rem;
     }
+    
+    /* Delete button styles for mobile */
+    .delete-order-btn {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.4rem;
+        border-width: 1px;
+    }
+    
+    .delete-order-btn:hover {
+        background-color: #dc3545;
+        color: white;
+    }
 }
 
 /* Responsive adjustments for stat cards */

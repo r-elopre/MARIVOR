@@ -1118,6 +1118,15 @@ class SupabaseClient:
         except Exception as e:
             print(f"Error updating order status: {e}")
             return False
+    
+    def delete_order(self, order_id: int) -> bool:
+        """Delete an order (only if pending)"""
+        try:
+            response = self.client.table('orders').delete().eq('id', order_id).execute()
+            return len(response.data) > 0
+        except Exception as e:
+            print(f"Error deleting order: {e}")
+            return False
 
 # Global Supabase client instance
 supabase_client = None

@@ -733,6 +733,39 @@ def profile():
         flash('Error loading profile. Please try again.', 'error')
         return redirect(url_for('home'))
 
+@app.route('/delete_order/<int:order_id>', methods=['POST'])
+def delete_order(order_id):
+    """Delete a pending order"""
+    if not is_logged_in():
+        return jsonify({'success': False, 'error': 'Please log in first'})
+    
+    try:
+        supabase_client = get_supabase_client()
+        
+        # First, verify the order belongs to the user and is pending
+        order = supabase_client.get_order_by_id(order_id)
+        
+        if not order:
+            return jsonify({'success': False, 'error': 'Order not found'})
+        
+        if order.get('user_id') != session['user_id']:
+            return jsonify({'success': False, 'error': 'Unauthorized access'})
+        
+        if order.get('status') != 'pending':
+            return jsonify({'success': False, 'error': 'Only pending orders can be deleted'})
+        
+        # Delete the order
+        result = supabase_client.delete_order(order_id)
+        
+        if result:
+            return jsonify({'success': True, 'message': 'Order deleted successfully'})
+        else:
+            return jsonify({'success': False, 'error': 'Failed to delete order'})
+            
+    except Exception as e:
+        print(f"Delete order error: {e}")
+        return jsonify({'success': False, 'error': 'An error occurred while deleting the order'})
+
 @app.route('/login')
 def login():
     """Login page"""
