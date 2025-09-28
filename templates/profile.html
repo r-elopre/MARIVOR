@@ -74,28 +74,35 @@
 
                 <!-- Order History Card -->
                 {% if user_orders %}
+                <!-- Active Orders (Pending/Cancelled) -->
+                {% set active_orders = user_orders|selectattr('status', 'in', ['pending', 'cancelled', 'processing', 'shipped'])|list %}
+                {% set completed_orders = user_orders|selectattr('status', 'equalto', 'completed')|list %}
+                
+                {% if active_orders %}
                 <div class="card mb-4">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-box-seam"></i> Order History</h5>
-                        <small class="text-muted">{{ user_orders|length }} order{% if user_orders|length != 1 %}s{% endif %} found</small>
+                        <h5 class="mb-0"><i class="bi bi-clock"></i> Current Orders</h5>
+                        <small class="text-muted">{{ active_orders|length }} active order{% if active_orders|length != 1 %}s{% endif %}</small>
                     </div>
                     <div class="card-body">
-                        {% for order in user_orders %}
+                        {% for order in active_orders %}
                         <div class="order-history-card card shadow-sm">
                             <div class="card-body">
                                 <!-- Mobile Layout -->
                                 <div class="d-md-none order-mobile-layout">
                                     <!-- Order Header -->
                                     <div class="order-header">
-                                        <div class="order-id">
-                                            <strong>Order #{{ order.id }}</strong>
+                                        <div class="order-date">
+                                            <strong>{{ order.created_at.strftime('%b %d, %Y') if order.created_at else 'Recent Order' }}</strong>
                                         </div>
                                         <div class="order-actions d-flex align-items-center gap-2">
                                             <div class="order-status">
                                                 {% if order.status == 'pending' %}
                                                     <span class="badge bg-warning text-dark">Pending</span>
-                                                {% elif order.status == 'completed' %}
-                                                    <span class="badge bg-success">Completed</span>
+                                                {% elif order.status == 'processing' %}
+                                                    <span class="badge bg-info text-dark">Processing</span>
+                                                {% elif order.status == 'shipped' %}
+                                                    <span class="badge bg-primary">Shipped</span>
                                                 {% elif order.status == 'cancelled' %}
                                                     <span class="badge bg-danger">Cancelled</span>
                                                 {% else %}
@@ -205,12 +212,14 @@
                                     <div class="row">
                                         <div class="col-md-8">
                                             <div class="d-flex justify-content-between align-items-center mb-3">
-                                                <h5 class="mb-0">Order #{{ order.id }}</h5>
+                                                <h5 class="mb-0">{{ order.created_at.strftime('%B %d, %Y') if order.created_at else 'Recent Order' }}</h5>
                                                 <div class="d-flex align-items-center gap-2">
                                                     {% if order.status == 'pending' %}
                                                         <span class="badge bg-warning text-dark">Pending</span>
-                                                    {% elif order.status == 'completed' %}
-                                                        <span class="badge bg-success">Completed</span>
+                                                    {% elif order.status == 'processing' %}
+                                                        <span class="badge bg-info text-dark">Processing</span>
+                                                    {% elif order.status == 'shipped' %}
+                                                        <span class="badge bg-primary">Shipped</span>
                                                     {% elif order.status == 'cancelled' %}
                                                         <span class="badge bg-danger">Cancelled</span>
                                                     {% else %}
@@ -325,10 +334,226 @@
                         {% endfor %}
                     </div>
                 </div>
-                {% else %}
+                {% endif %}
+                
+                <!-- Purchase History (Completed Orders) - Collapsible -->
+                {% if completed_orders %}
                 <div class="card mb-4">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-box-seam"></i> Order History</h5>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="mb-0"><i class="bi bi-check2-circle"></i> Purchase History</h5>
+                                <small class="text-muted">{{ completed_orders|length }} completed purchase{% if completed_orders|length != 1 %}s{% endif %}</small>
+                            </div>
+                            <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" 
+                                    data-bs-target="#purchaseHistory" aria-expanded="false" aria-controls="purchaseHistory">
+                                <i class="bi bi-chevron-down"></i> View History
+                            </button>
+                        </div>
+                    </div>
+                    <div class="collapse" id="purchaseHistory">
+                        <div class="card-body">
+                            {% for order in completed_orders %}
+                            <div class="order-history-card card shadow-sm mb-3 completed-order">
+                                <div class="card-body">
+                                    <!-- Mobile Layout -->
+                                    <div class="d-md-none order-mobile-layout">
+                                        <!-- Order Header -->
+                                        <div class="order-header">
+                                            <div class="order-date">
+                                                <strong>{{ order.created_at.strftime('%b %d, %Y') if order.created_at else 'Purchase' }}</strong>
+                                            </div>
+                                            <div class="order-status">
+                                                <span class="badge bg-success">✓ Delivered</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Same order content as active orders but without delete button -->
+                                        <div class="order-content">
+                                            <!-- Images Section -->
+                                            <div class="order-images-section">
+                                                {% if order.image_url %}
+                                                <div class="order-product-image">
+                                                    <img src="{{ order.image_url }}" alt="Product image" 
+                                                         class="img-thumbnail" style="object-fit: cover;">
+                                                    <small class="d-block text-muted mt-1">Product</small>
+                                                </div>
+                                                {% endif %}
+                                                
+                                                {% if order.face_photo_front %}
+                                                <div class="order-face-photo">
+                                                    <img src="{{ order.face_photo_front }}" alt="Verification photo" 
+                                                         class="img-thumbnail" style="object-fit: cover;">
+                                                    <small class="d-block text-muted mt-1">Verification</small>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                            
+                                            <!-- Product Details -->
+                                            {% if order.parsed_items and order.parsed_items.total_products > 0 %}
+                                            <div class="products-section">
+                                                <div class="mb-2">
+                                                    <strong>Products ({{ order.parsed_items.total_products }} item{% if order.parsed_items.total_products != 1 %}s{% endif %}):</strong>
+                                                </div>
+                                                <div class="products-list">
+                                                    {% for product_name in order.parsed_items.product_names %}
+                                                    <div class="product-item d-flex justify-content-between align-items-center bg-light rounded">
+                                                        <div class="product-details">
+                                                            <span class="product-name">{{ product_name }}</span>
+                                                            {% if order.parsed_items.quantities[loop.index0] %}
+                                                            <small class="text-muted ms-2">(Qty: {{ order.parsed_items.quantities[loop.index0] }})</small>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                            {% elif order.formatted_products %}
+                                            <div class="products-section">
+                                                <strong>Products:</strong> 
+                                                <span class="text-muted">{{ order.formatted_products }}</span>
+                                            </div>
+                                            {% endif %}
+                                            
+                                            <!-- Total and Details -->
+                                            <div class="order-summary">
+                                                <div class="order-total mb-2">
+                                                    <strong>Total: ₱{{ "%.2f"|format(order.total_amount) }}</strong>
+                                                </div>
+                                                
+                                                <div class="order-date text-muted">
+                                                    <i class="bi bi-calendar-check"></i> 
+                                                    Completed {{ order.created_at.strftime('%b %d, %Y') if order.created_at else 'Recently' }}
+                                                </div>
+                                                
+                                                {% if order.seller_store_names %}
+                                                <div class="seller-info">
+                                                    <strong>From:</strong>
+                                                    {% for seller_name in order.seller_store_names %}
+                                                    <div class="seller-badge">
+                                                        <span class="badge bg-info text-dark">
+                                                            <i class="bi bi-shop"></i> {{ seller_name }}
+                                                        </span>
+                                                    </div>
+                                                    {% endfor %}
+                                                </div>
+                                                {% elif order.formatted_sellers %}
+                                                <div class="seller-info">
+                                                    <small class="text-muted">
+                                                        <i class="bi bi-shop"></i> {{ order.formatted_sellers }}
+                                                    </small>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Desktop Layout for Completed Orders -->
+                                    <div class="d-none d-md-block">
+                                        <div class="row">
+                                            <div class="col-md-8">
+                                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                                    <h5 class="mb-0">{{ order.created_at.strftime('%B %d, %Y') if order.created_at else 'Purchase' }}</h5>
+                                                    <span class="badge bg-success fs-6">✓ Delivered</span>
+                                                </div>
+                                                
+                                                <div class="order-details">
+                                                    <!-- Same product information as active orders -->
+                                                    {% if order.parsed_items and order.parsed_items.total_products > 0 %}
+                                                    <div class="mb-3">
+                                                        <strong>Products ({{ order.parsed_items.total_products }} item{% if order.parsed_items.total_products != 1 %}s{% endif %}):</strong>
+                                                        
+                                                        {% if order.image_url %}
+                                                        <div class="order-product-image mb-3">
+                                                            <img src="{{ order.image_url }}" alt="Product image" 
+                                                                 class="img-thumbnail" style="object-fit: cover;">
+                                                            <small class="d-block text-muted mt-1">Product Image</small>
+                                                        </div>
+                                                        {% endif %}
+                                                        
+                                                        <div class="products-list mt-3">
+                                                            {% for product_name in order.parsed_items.product_names %}
+                                                            <div class="product-item d-flex justify-content-between align-items-center bg-light rounded">
+                                                                <div class="product-details">
+                                                                    <span class="product-name">{{ product_name }}</span>
+                                                                    {% if order.parsed_items.quantities[loop.index0] %}
+                                                                    <small class="text-muted ms-2">(Qty: {{ order.parsed_items.quantities[loop.index0] }})</small>
+                                                                    {% endif %}
+                                                                </div>
+                                                            </div>
+                                                            {% endfor %}
+                                                        </div>
+                                                    </div>
+                                                    {% elif order.formatted_products %}
+                                                    <div class="mb-3">
+                                                        <strong>Products:</strong> 
+                                                        <span class="text-muted">{{ order.formatted_products }}</span>
+                                                        
+                                                        {% if order.image_url %}
+                                                        <div class="order-product-image mt-2">
+                                                            <img src="{{ order.image_url }}" alt="Product image" 
+                                                                 class="img-thumbnail" style="object-fit: cover;">
+                                                            <small class="d-block text-muted mt-1">Product Image</small>
+                                                        </div>
+                                                        {% endif %}
+                                                    </div>
+                                                    {% endif %}
+                                                    
+                                                    <div class="mb-3">
+                                                        <strong>Total:</strong> 
+                                                        <span class="text-success fw-bold fs-5">₱{{ "%.2f"|format(order.total_amount) }}</span>
+                                                    </div>
+                                                    
+                                                    <div class="text-muted">
+                                                        <i class="bi bi-calendar-check"></i> 
+                                                        Completed on {{ order.created_at.strftime('%B %d, %Y at %I:%M %p') if order.created_at else 'Unknown date' }} (Manila)
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="col-md-4">
+                                                {% if order.face_photo_front %}
+                                                <div class="order-face-photo mb-3 text-center">
+                                                    <img src="{{ order.face_photo_front }}" alt="Order verification photo" 
+                                                         class="img-thumbnail" style="object-fit: cover;">
+                                                    <small class="d-block text-muted mt-1">Verification Photo</small>
+                                                </div>
+                                                {% endif %}
+                                                
+                                                {% if order.seller_store_names %}
+                                                <div class="seller-info text-center">
+                                                    <strong>From:</strong>
+                                                    {% for seller_name in order.seller_store_names %}
+                                                    <div class="seller-badge mt-2">
+                                                        <span class="badge bg-info text-dark">
+                                                            <i class="bi bi-shop"></i> {{ seller_name }}
+                                                        </span>
+                                                    </div>
+                                                    {% endfor %}
+                                                </div>
+                                                {% elif order.formatted_sellers %}
+                                                <div class="seller-info text-center">
+                                                    <small class="text-muted">
+                                                        <i class="bi bi-shop"></i> {{ order.formatted_sellers }}
+                                                    </small>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- No Orders Message -->
+                {% if not active_orders and not completed_orders %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-box-seam"></i> Your Orders</h5>
                     </div>
                     <div class="card-body text-center">
                         <div class="py-5">
@@ -341,6 +566,7 @@
                         </div>
                     </div>
                 </div>
+                {% endif %}
                 {% endif %}
 
                 <!-- Actions Card -->
@@ -641,6 +867,29 @@
         font-size: 0.55rem;
         margin-bottom: 0.2rem;
     }
+}
+
+/* Purchase History Styles */
+.completed-order {
+    opacity: 0.9;
+    border-left: 4px solid #198754;
+}
+
+.completed-order .card-body {
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+}
+
+.completed-order .badge {
+    background-color: #198754 !important;
+}
+
+/* Collapse button animation */
+[data-bs-toggle="collapse"] .bi-chevron-down {
+    transition: transform 0.3s ease;
+}
+
+[data-bs-toggle="collapse"][aria-expanded="true"] .bi-chevron-down {
+    transform: rotate(180deg);
 }
 
 .face-code-display {
