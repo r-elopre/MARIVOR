@@ -86,29 +86,58 @@
                     </div>
                     <div class="card-body">
                         {% for order in user_orders %}
-                        <div class="order-card mb-3 p-3 border rounded">
-                            <div class="row">
-                                <div class="col-md-8">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        {% if order.status == 'pending' %}
-                                            <span class="badge bg-warning text-dark">Pending</span>
-                                        {% elif order.status == 'completed' %}
-                                            <span class="badge bg-success">Completed</span>
-                                        {% elif order.status == 'cancelled' %}
-                                            <span class="badge bg-danger">Cancelled</span>
-                                        {% else %}
-                                            <span class="badge bg-secondary">{{ order.status|title }}</span>
-                                        {% endif %}
+                        <div class="order-history-card card shadow-sm">
+                            <div class="card-body">
+                                <!-- Mobile Layout -->
+                                <div class="d-md-none order-mobile-layout">
+                                    <!-- Order Header -->
+                                    <div class="order-header">
+                                        <div class="order-id">
+                                            <strong>Order #{{ order.id }}</strong>
+                                        </div>
+                                        <div class="order-status">
+                                            {% if order.status == 'pending' %}
+                                                <span class="badge bg-warning text-dark">Pending</span>
+                                            {% elif order.status == 'completed' %}
+                                                <span class="badge bg-success">Completed</span>
+                                            {% elif order.status == 'cancelled' %}
+                                                <span class="badge bg-danger">Cancelled</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">{{ order.status|title }}</span>
+                                            {% endif %}
+                                        </div>
                                     </div>
                                     
-                                    <div class="order-details">
-                                        <!-- Enhanced Product Information from items JSONB -->
+                                    <!-- Order Content -->
+                                    <div class="order-content">
+                                        <!-- Images Section -->
+                                        <div class="order-images-section">
+                                            {% if order.image_url %}
+                                            <div class="order-product-image">
+                                                <img src="{{ order.image_url }}" alt="Product image" 
+                                                     class="img-thumbnail" style="object-fit: cover;">
+                                                <small class="d-block text-muted mt-1">Product</small>
+                                            </div>
+                                            {% endif %}
+                                            
+                                            {% if order.face_photo_front %}
+                                            <div class="order-face-photo">
+                                                <img src="{{ order.face_photo_front }}" alt="Verification photo" 
+                                                     class="img-thumbnail" style="object-fit: cover;">
+                                                <small class="d-block text-muted mt-1">Verification</small>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <!-- Product Details -->
                                         {% if order.parsed_items and order.parsed_items.total_products > 0 %}
-                                        <div class="mb-3">
-                                            <strong>Products ({{ order.parsed_items.total_products }} item{% if order.parsed_items.total_products != 1 %}s{% endif %}):</strong>
-                                            <div class="products-list mt-2">
+                                        <div class="products-section">
+                                            <div class="mb-2">
+                                                <strong>Products ({{ order.parsed_items.total_products }} item{% if order.parsed_items.total_products != 1 %}s{% endif %}):</strong>
+                                            </div>
+                                            <div class="products-list">
                                                 {% for product_name in order.parsed_items.product_names %}
-                                                <div class="product-item d-flex justify-content-between align-items-center mb-1 p-2 bg-light rounded">
+                                                <div class="product-item d-flex justify-content-between align-items-center bg-light rounded">
                                                     <div class="product-details">
                                                         <span class="product-name">{{ product_name }}</span>
                                                         {% if order.parsed_items.quantities[loop.index0] %}
@@ -120,58 +149,161 @@
                                             </div>
                                         </div>
                                         {% elif order.formatted_products %}
-                                        <div class="mb-2">
+                                        <div class="products-section">
                                             <strong>Products:</strong> 
                                             <span class="text-muted">{{ order.formatted_products }}</span>
                                         </div>
                                         {% endif %}
                                         
-                                        <div class="mb-2">
-                                            <strong>Total:</strong> 
-                                            <span class="text-success fw-bold">₱{{ "%.2f"|format(order.total_amount) }}</span>
-                                        </div>
-                                        
-                                        {% if order.shipping_address %}
-                                        <div class="mb-2">
-                                            <strong>Shipping Address:</strong>
-                                            <small class="text-muted d-block">{{ order.shipping_address }}</small>
-                                        </div>
-                                        {% endif %}
-                                        
-                                        <div class="text-muted small">
-                                            <i class="bi bi-calendar"></i> 
-                                            Ordered on {{ order.created_at.strftime('%B %d, %Y at %I:%M %p') if order.created_at else 'Unknown date' }} (Manila)
+                                        <!-- Total and Details -->
+                                        <div class="order-summary">
+                                            <div class="order-total mb-2">
+                                                <strong>Total: ₱{{ "%.2f"|format(order.total_amount) }}</strong>
+                                            </div>
+                                            
+                                            {% if order.shipping_address %}
+                                            <div class="shipping-address mb-2">
+                                                <strong>Shipping:</strong>
+                                                <small class="text-muted d-block">{{ order.shipping_address }}</small>
+                                            </div>
+                                            {% endif %}
+                                            
+                                            <div class="order-date text-muted">
+                                                <i class="bi bi-calendar"></i> 
+                                                {{ order.created_at.strftime('%b %d, %Y at %I:%M %p') if order.created_at else 'Unknown date' }}
+                                            </div>
+                                            
+                                            {% if order.seller_store_names %}
+                                            <div class="seller-info">
+                                                <strong>Seller{% if order.seller_store_names|length > 1 %}s{% endif %}:</strong>
+                                                {% for seller_name in order.seller_store_names %}
+                                                <div class="seller-badge">
+                                                    <span class="badge bg-info text-dark">
+                                                        <i class="bi bi-shop"></i> {{ seller_name }}
+                                                    </span>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                            {% elif order.formatted_sellers %}
+                                            <div class="seller-info">
+                                                <small class="text-muted">
+                                                    <i class="bi bi-shop"></i> {{ order.formatted_sellers }}
+                                                </small>
+                                            </div>
+                                            {% endif %}
                                         </div>
                                     </div>
                                 </div>
                                 
-                                <div class="col-md-4 text-center">
-                                    {% if order.face_photo_front %}
-                                    <div class="order-face-photo mb-2">
-                                        <img src="{{ order.face_photo_front }}" alt="Order verification photo" 
-                                             class="img-thumbnail" style="width: 80px; height: 80px; object-fit: cover;">
-                                        <small class="d-block text-muted">Verification Photo</small>
-                                    </div>
-                                    {% endif %}
-                                    
-                                    {% if order.seller_store_names %}
-                                    <div class="seller-info">
-                                        <strong>Seller{% if order.seller_store_names|length > 1 %}s{% endif %}:</strong>
-                                        {% for seller_name in order.seller_store_names %}
-                                        <div class="seller-badge mt-1">
-                                            <small class="badge bg-info text-dark">
-                                                <i class="bi bi-shop"></i> {{ seller_name }}
-                                            </small>
+                                <!-- Desktop/Tablet Layout -->
+                                <div class="d-none d-md-block">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                                <h5 class="mb-0">Order #{{ order.id }}</h5>
+                                                {% if order.status == 'pending' %}
+                                                    <span class="badge bg-warning text-dark">Pending</span>
+                                                {% elif order.status == 'completed' %}
+                                                    <span class="badge bg-success">Completed</span>
+                                                {% elif order.status == 'cancelled' %}
+                                                    <span class="badge bg-danger">Cancelled</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">{{ order.status|title }}</span>
+                                                {% endif %}
+                                            </div>
+                                            
+                                            <div class="order-details">
+                                                <!-- Enhanced Product Information from items JSONB -->
+                                                {% if order.parsed_items and order.parsed_items.total_products > 0 %}
+                                                <div class="mb-3">
+                                                    <strong>Products ({{ order.parsed_items.total_products }} item{% if order.parsed_items.total_products != 1 %}s{% endif %}):</strong>
+                                                    
+                                                    <!-- Display order representative image if available -->
+                                                    {% if order.image_url %}
+                                                    <div class="order-product-image mb-3">
+                                                        <img src="{{ order.image_url }}" alt="Product image" 
+                                                             class="img-thumbnail" style="object-fit: cover;">
+                                                        <small class="d-block text-muted mt-1">Product Image</small>
+                                                    </div>
+                                                    {% endif %}
+                                                    
+                                                    <div class="products-list mt-3">
+                                                        {% for product_name in order.parsed_items.product_names %}
+                                                        <div class="product-item d-flex justify-content-between align-items-center bg-light rounded">
+                                                            <div class="product-details">
+                                                                <span class="product-name">{{ product_name }}</span>
+                                                                {% if order.parsed_items.quantities[loop.index0] %}
+                                                                <small class="text-muted ms-2">(Qty: {{ order.parsed_items.quantities[loop.index0] }})</small>
+                                                                {% endif %}
+                                                            </div>
+                                                        </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+                                                {% elif order.formatted_products %}
+                                                <div class="mb-3">
+                                                    <strong>Products:</strong> 
+                                                    <span class="text-muted">{{ order.formatted_products }}</span>
+                                                    
+                                                    <!-- Display order representative image if available -->
+                                                    {% if order.image_url %}
+                                                    <div class="order-product-image mt-2">
+                                                        <img src="{{ order.image_url }}" alt="Product image" 
+                                                             class="img-thumbnail" style="object-fit: cover;">
+                                                        <small class="d-block text-muted mt-1">Product Image</small>
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                                {% endif %}
+                                                
+                                                <div class="mb-3">
+                                                    <strong>Total:</strong> 
+                                                    <span class="text-success fw-bold fs-5">₱{{ "%.2f"|format(order.total_amount) }}</span>
+                                                </div>
+                                                
+                                                {% if order.shipping_address %}
+                                                <div class="mb-3">
+                                                    <strong>Shipping Address:</strong>
+                                                    <small class="text-muted d-block">{{ order.shipping_address }}</small>
+                                                </div>
+                                                {% endif %}
+                                                
+                                                <div class="text-muted">
+                                                    <i class="bi bi-calendar"></i> 
+                                                    Ordered on {{ order.created_at.strftime('%B %d, %Y at %I:%M %p') if order.created_at else 'Unknown date' }} (Manila)
+                                                </div>
+                                            </div>
                                         </div>
-                                        {% endfor %}
+                                        
+                                        <div class="col-md-4">
+                                            {% if order.face_photo_front %}
+                                            <div class="order-face-photo mb-3 text-center">
+                                                <img src="{{ order.face_photo_front }}" alt="Order verification photo" 
+                                                     class="img-thumbnail" style="object-fit: cover;">
+                                                <small class="d-block text-muted mt-1">Verification Photo</small>
+                                            </div>
+                                            {% endif %}
+                                            
+                                            {% if order.seller_store_names %}
+                                            <div class="seller-info text-center">
+                                                <strong>Seller{% if order.seller_store_names|length > 1 %}s{% endif %}:</strong>
+                                                {% for seller_name in order.seller_store_names %}
+                                                <div class="seller-badge mt-2">
+                                                    <span class="badge bg-info text-dark">
+                                                        <i class="bi bi-shop"></i> {{ seller_name }}
+                                                    </span>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                            {% elif order.formatted_sellers %}
+                                            <div class="seller-info text-center">
+                                                <small class="text-muted">
+                                                    <i class="bi bi-shop"></i> {{ order.formatted_sellers }}
+                                                </small>
+                                            </div>
+                                            {% endif %}
+                                        </div>
                                     </div>
-                                    {% elif order.formatted_sellers %}
-                                    <div class="seller-info">
-                                        <small class="text-muted">
-                                            <i class="bi bi-shop"></i> {{ order.formatted_sellers }}
-                                        </small>
-                                    </div>
-                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -280,6 +412,23 @@
 .order-face-photo img {
     border: 2px solid #e9ecef;
     border-radius: 8px;
+}
+
+.order-product-image {
+    display: inline-block;
+    margin-right: 1rem;
+    text-align: center;
+}
+
+.order-product-image img {
+    border: 2px solid #007bff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+    transition: transform 0.2s ease;
+}
+
+.order-product-image img:hover {
+    transform: scale(1.05);
 }
 
 .order-details {
