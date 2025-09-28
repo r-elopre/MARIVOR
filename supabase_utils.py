@@ -612,7 +612,7 @@ class SupabaseClient:
             # Select all specific columns from orders table, filter by status
             response = self.client.table('orders').select(
                 'id, created_at, user_id, order_number, status, total_amount, currency, '
-                'customer_name, customer_phone, shipping_address, items, face_photo_front'
+                'customer_name, customer_phone, shipping_address, items, face_photo_front, image_url'
             ).eq('status', status).order('created_at', desc=True).execute()
             return response.data if response.data else []
         except Exception as e:
@@ -625,7 +625,7 @@ class SupabaseClient:
             # Select all specific columns from orders table
             response = self.client.table('orders').select(
                 'id, created_at, user_id, order_number, status, total_amount, currency, '
-                'customer_name, customer_phone, shipping_address, items, face_photo_front'
+                'customer_name, customer_phone, shipping_address, items, face_photo_front, image_url'
             ).order('created_at', desc=True).execute()
             return response.data if response.data else []
         except Exception as e:
@@ -638,7 +638,7 @@ class SupabaseClient:
             # Select orders that are not completed (pending, processing, on_delivery)
             response = self.client.table('orders').select(
                 'id, created_at, user_id, order_number, status, total_amount, currency, '
-                'customer_name, customer_phone, shipping_address, items, face_photo_front'
+                'customer_name, customer_phone, shipping_address, items, face_photo_front, image_url'
             ).neq('status', 'completed').order('created_at', desc=True).execute()
             return response.data if response.data else []
         except Exception as e:
@@ -955,8 +955,8 @@ class SupabaseClient:
             print(f"Error deleting user photos: {e}")
             return False
     
-    def upload_product_image(self, seller_id: int, image_data: bytes, filename: str) -> str:
-        """Upload product image and return public URL"""
+    def upload_seller_product_image(self, seller_id: int, image_data: bytes, filename: str) -> str:
+        """Upload product image for seller and return public URL"""
         try:
             # Generate unique filename (without products/ prefix since we're uploading to products bucket)
             file_extension = filename.rsplit('.', 1)[1].lower() if '.' in filename else 'jpg'
@@ -1010,7 +1010,8 @@ class SupabaseClient:
                 'customer_phone': order_data.get('customer_phone', ''),
                 'shipping_address': order_data.get('shipping_address', ''),
                 'items': cart_items,  # All product info is stored here as JSONB
-                'face_photo_front': order_data.get('face_photo_front')
+                'face_photo_front': order_data.get('face_photo_front'),
+                'image_url': self._get_order_representative_image(cart_items)  # Get first product's image
                 # Removed: seller_id, products_name, products_id (deprecated)
             }
             
@@ -1033,6 +1034,31 @@ class SupabaseClient:
         """Create a single-seller order (deprecated - use create_order instead)"""
         # Just redirect to the main create_order function for consistency
         return self.create_order(order_data)
+    
+    def _get_order_representative_image(self, cart_items: List[Dict[str, Any]]) -> str:
+        """Get representative image URL for the order from cart items"""
+        try:
+            if not cart_items:
+                return ''
+            
+            # Get the first item's image URL
+            first_item = cart_items[0]
+            image_url = first_item.get('image_url', '')
+            
+            # If first item doesn't have image, try to get it from product database
+            if not image_url and first_item.get('product_id'):
+                try:
+                    product = self.get_product_by_id(first_item.get('product_id'))
+                    if product:
+                        image_url = product.get('image_url', '')
+                except Exception as e:
+                    print(f"Error fetching product image: {e}")
+            
+            return image_url or ''
+            
+        except Exception as e:
+            print(f"Error getting order representative image: {e}")
+            return ''
     
 
     

@@ -1581,7 +1581,7 @@ def seller_add_product():
                     
                     # Upload using the new method
                     image_data = image_file.read()
-                    image_url = supabase_client.upload_product_image(seller_id, image_data, image_file.filename)
+                    image_url = supabase_client.upload_seller_product_image(seller_id, image_data, image_file.filename)
                         
                 except Exception as e:
                     print(f"Image upload error: {e}")
@@ -1731,9 +1731,39 @@ def seller_edit_product(product_id):
 def seller_delete_product(product_id):
     """Delete seller product"""
     if session.get('user_type') != 'seller':
+        flash('Seller access required!', 'error')
         return redirect(url_for('login'))
     
-    flash('Product deleted successfully!', 'success')
+    try:
+        seller_id = session.get('seller_id')
+        if not seller_id:
+            flash('Seller ID not found in session!', 'error')
+            return redirect(url_for('seller_products'))
+        
+        supabase_client = get_supabase_client()
+        
+        # First verify the product belongs to this seller
+        product = supabase_client.get_product_by_id(product_id)
+        if not product:
+            flash('Product not found!', 'error')
+            return redirect(url_for('seller_products'))
+        
+        if product.get('seller_id') != seller_id:
+            flash('You can only delete your own products!', 'error')
+            return redirect(url_for('seller_products'))
+        
+        # Delete the product
+        success = supabase_client.delete_product(product_id)
+        
+        if success:
+            flash(f'Product "{product.get("name", "Unknown")}" deleted successfully!', 'success')
+        else:
+            flash('Failed to delete product. Please try again.', 'error')
+            
+    except Exception as e:
+        print(f"Error deleting product {product_id}: {e}")
+        flash('An error occurred while deleting the product.', 'error')
+    
     return redirect(url_for('seller_products'))
 
 @app.route('/seller/orders')
@@ -1806,22 +1836,8 @@ def seller_orders():
             if processed_order['items_list']:
                 first_item = processed_order['items_list'][0]
                 
-                # Try to get product image using product_id from the items JSON
-                product_id = first_item.get('product_id')
-                if product_id:
-                    try:
-                        product_details = supabase_client.get_product_by_id(product_id)
-                        if product_details and product_details.get('image_url'):
-                            processed_order['first_product_image'] = product_details['image_url']
-                        else:
-                            # Fallback to image_url from items JSON if exists
-                            processed_order['first_product_image'] = first_item.get('image_url', '')
-                    except Exception as e:
-                        print(f"Error fetching product image for product_id {product_id}: {e}")
-                        processed_order['first_product_image'] = first_item.get('image_url', '')
-                else:
-                    # Fallback to image_url from items JSON if no product_id
-                    processed_order['first_product_image'] = first_item.get('image_url', '')
+                # Use the image_url directly from orders table (simpler approach)
+                processed_order['first_product_image'] = order.get('image_url', '')
                 
                 processed_order['first_product_name'] = first_item.get('name', 'Unknown Product')
                 processed_order['first_product_price'] = first_item.get('price', 0)
@@ -1840,7 +1856,7 @@ def seller_orders():
                 processed_order['calculated_total'] = total_value
                 processed_order['calculated_total_formatted'] = f"₱{total_value:.2f}"
             else:
-                processed_order['first_product_image'] = ''
+                processed_order['first_product_image'] = order.get('image_url', '')
                 processed_order['first_product_name'] = 'No Products'
                 processed_order['first_product_price'] = 0
                 processed_order['first_product_quantity'] = 0
