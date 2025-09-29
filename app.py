@@ -383,6 +383,60 @@ def api_cart_get():
         print(f"Cart get error: {e}")
         return jsonify({'success': False, 'error': 'Failed to get cart data'})
 
+@app.route('/api/cart/check-stock', methods=['POST'])
+def api_cart_check_stock():
+    """Check product stock before adding to cart"""
+    try:
+        if not is_logged_in():
+            return jsonify({'success': False, 'error': 'Please log in to check stock'})
+        
+        data = request.get_json()
+        product_id = data.get('product_id')
+        quantity = data.get('quantity', 1)
+        
+        if not product_id:
+            return jsonify({'success': False, 'error': 'Product ID is required'})
+        
+        # Get current stock from database
+        supabase_client = get_supabase_client()
+        product = supabase_client.get_product_by_id(product_id)
+        
+        if not product:
+            return jsonify({'success': False, 'error': 'Product not found'})
+        
+        current_stock = product.get('stock', 0)
+        product_name = product.get('name', 'Unknown Product')
+        
+        # Check if product is out of stock
+        if current_stock <= 0:
+            return jsonify({
+                'success': False, 
+                'error': f'Sorry, "{product_name}" is currently out of stock',
+                'stock': current_stock,
+                'product_name': product_name
+            })
+        
+        # Check if requested quantity exceeds available stock
+        if quantity > current_stock:
+            return jsonify({
+                'success': False,
+                'error': f'Only {current_stock} items available for "{product_name}"',
+                'stock': current_stock,
+                'product_name': product_name
+            })
+        
+        # Stock is available
+        return jsonify({
+            'success': True,
+            'message': f'"{product_name}" is available',
+            'stock': current_stock,
+            'product_name': product_name
+        })
+        
+    except Exception as e:
+        print(f"Stock check error: {e}")
+        return jsonify({'success': False, 'error': 'Failed to check product stock'})
+
 # User API Routes
 @app.route('/api/user/details', methods=['GET'])
 def api_user_details():

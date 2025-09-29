@@ -13,16 +13,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Cart functionality - Enhanced version
+// Cart functionality - Enhanced version with stock checking
 function addToCart(productId, productName = '') {
     // Show loading state
     const button = event.target.closest('button');
     const originalHTML = button.innerHTML;
-    button.innerHTML = '<i class="bi bi-hourglass-split"></i> Adding...';
+    button.innerHTML = '<i class="bi bi-hourglass-split"></i> Checking...';
     button.disabled = true;
     
-    // Make API call to add item to cart
-    fetch('/api/cart/add', {
+    // First, check stock availability
+    fetch('/api/cart/check-stock', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -33,40 +33,73 @@ function addToCart(productId, productName = '') {
         })
     })
     .then(response => response.json())
-    .then(data => {
-        // Reset button
-        button.innerHTML = originalHTML;
-        button.disabled = false;
-        
-        if (data.success) {
-            // Update cart count in navigation
-            updateCartBadge(data.cart_count);
-            
-            // Show success message
-            showNotification(data.message || `"${productName}" added to cart!`, 'success');
-            
-            // Briefly change button text to show success
-            const successHTML = '<i class="bi bi-check2"></i> Added!';
-            button.innerHTML = successHTML;
-            button.classList.add('btn-success');
-            button.classList.remove('btn-primary');
-            
-            setTimeout(() => {
-                button.innerHTML = originalHTML;
-                button.classList.remove('btn-success');
-                button.classList.add('btn-primary');
-            }, 2000);
-        } else {
-            showNotification(data.error || 'Failed to add item to cart', 'danger');
+    .then(stockData => {
+        if (!stockData.success) {
+            // Stock check failed - show error and reset button
+            button.innerHTML = originalHTML;
+            button.disabled = false;
+            showNotification(stockData.error || 'Product is out of stock', 'warning');
+            return;
         }
+        
+        // Stock is available - proceed with adding to cart
+        button.innerHTML = '<i class="bi bi-hourglass-split"></i> Adding...';
+        
+        // Make API call to add item to cart
+        fetch('/api/cart/add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                product_id: productId,
+                quantity: 1
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Reset button
+            button.innerHTML = originalHTML;
+            button.disabled = false;
+            
+            if (data.success) {
+                // Update cart count in navigation
+                updateCartBadge(data.cart_count);
+                
+                // Show success message
+                showNotification(data.message || `"${productName}" added to cart!`, 'success');
+                
+                // Briefly change button text to show success
+                const successHTML = '<i class="bi bi-check2"></i> Added!';
+                button.innerHTML = successHTML;
+                button.classList.add('btn-success');
+                button.classList.remove('btn-primary');
+                
+                setTimeout(() => {
+                    button.innerHTML = originalHTML;
+                    button.classList.remove('btn-success');
+                    button.classList.add('btn-primary');
+                }, 2000);
+            } else {
+                showNotification(data.error || 'Failed to add item to cart', 'danger');
+            }
+        })
+        .catch(error => {
+            // Reset button
+            button.innerHTML = originalHTML;
+            button.disabled = false;
+            
+            console.error('Error:', error);
+            showNotification('Failed to add item to cart', 'danger');
+        });
     })
     .catch(error => {
-        // Reset button
+        // Stock check failed - reset button
         button.innerHTML = originalHTML;
         button.disabled = false;
         
-        console.error('Error:', error);
-        showNotification('Failed to add item to cart', 'danger');
+        console.error('Stock check error:', error);
+        showNotification('Failed to check product availability', 'danger');
     });
 }
 
