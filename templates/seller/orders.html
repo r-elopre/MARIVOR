@@ -342,7 +342,7 @@ function updateDesktopTable(tabId, orders) {
                         </div>
                     </div>
                 </td>
-                <td class="fw-bold">${order.total_items_count || 1}</td>
+                <td class="fw-bold">${order.first_quantity_with_unit || order.total_items_count || 1}</td>
                 <td class="fw-bold">${order.total_amount_formatted || '₱0.00'}</td>
                 <td>${statusBadge}</td>
                 <td><small class="text-muted">${order.created_at_manila || order.created_at}</small></td>
@@ -415,7 +415,7 @@ function updateMobileCards(tabId, orders) {
                                 <div class="flex-grow-1 min-w-0">
                                     <div class="fw-bold small text-truncate">${order.first_product_name || 'Unknown Product'}</div>
                                     <div class="text-muted small">
-                                        Qty: ${order.total_items_count}
+                                        Qty: ${order.first_quantity_with_unit || order.total_items_count}
                                         ${order.item_count > 1 ? `<span class="text-info">+${order.item_count - 1} more</span>` : ''}
                                     </div>
                                 </div>

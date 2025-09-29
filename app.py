@@ -1885,6 +1885,7 @@ def seller_orders():
                 processed_order['first_product_name'] = first_item.get('name', 'Unknown Product')
                 processed_order['first_product_price'] = first_item.get('price', 0)
                 processed_order['first_product_quantity'] = first_item.get('quantity', 1)
+                processed_order['first_product_unit'] = first_item.get('unit', 'piece')  # Get unit from items JSONB
                 
                 # Calculate total for all items
                 total_items = 0
@@ -1898,6 +1899,11 @@ def seller_orders():
                 processed_order['total_items_count'] = total_items
                 processed_order['calculated_total'] = total_value
                 processed_order['calculated_total_formatted'] = f"₱{total_value:.2f}"
+                
+                # Create quantity display with unit for the first item
+                first_unit = first_item.get('unit', 'piece')
+                first_quantity = first_item.get('quantity', 1)
+                processed_order['first_quantity_with_unit'] = f"{first_quantity} {first_unit}" if first_unit == 'kg' else f"{first_quantity} {first_unit}s" if first_quantity != 1 else f"{first_quantity} {first_unit}"
             else:
                 processed_order['first_product_image'] = order.get('image_url', '')
                 processed_order['first_product_name'] = 'No Products'

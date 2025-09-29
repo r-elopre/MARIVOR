@@ -311,7 +311,7 @@
                                                 </div>
                                                 <div class="col-6">
                                                     <small class="text-muted">Quantity:</small>
-                                                    <div class="fw-medium">{{ item.quantity }} pcs</div>
+                                                    <div class="fw-medium">{{ item.quantity }} {{ item.unit if item.unit else 'pcs' }}</div>
                                                 </div>
                                             </div>
                                         </div>
