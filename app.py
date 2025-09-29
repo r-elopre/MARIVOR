@@ -468,6 +468,12 @@ def api_order_create():
             item_price = item.get('price', 0.0)
             item_total = item_quantity * item_price
             
+            # Convert boolean unit to string unit for order items
+            # If product.unit is True -> "kg", if False -> "piece"
+            item_copy = item.copy()  # Make a copy to avoid modifying original cart
+            product_unit_boolean = item.get('unit', False)
+            item_copy['unit'] = 'kg' if product_unit_boolean else 'piece'
+            
             # Prepare order data for this single product
             order_data = {
                 'user_id': user_info.get('id'),  # Use user ID from database
@@ -478,7 +484,7 @@ def api_order_create():
                 'customer_name': user_info.get('full_name') or f"{user_info.get('first_name', '')} {user_info.get('last_name', '')}".strip(),
                 'customer_phone': user_info.get('phone'),
                 'shipping_address': shipping_address,
-                'items': [item],  # Only this single item
+                'items': [item_copy],  # Use the modified item with string unit
                 'face_photo_front': user_info.get('face_photo_front')
                 # Removed seller_id - all seller info is in items JSONB
             }
@@ -576,6 +582,10 @@ def api_order_create_by_seller():
                         item['seller_id'] = product_seller_id
                     if 'seller_name' not in item:
                         item['seller_name'] = product.get('seller_name', 'Unknown Seller')
+                    # Convert boolean unit to string unit for order items
+                    # If product.unit is True -> "kg", if False -> "piece"
+                    product_unit_boolean = product.get('unit', False)
+                    item['unit'] = 'kg' if product_unit_boolean else 'piece'
             
             # Prepare order data for this single product
             order_data = {

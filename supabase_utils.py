@@ -679,6 +679,7 @@ class SupabaseClient:
                         seller_ids = []
                         product_ids = []
                         quantities = []
+                        units = []  # Add units list
                         
                         for item in items:
                             if isinstance(item, dict):
@@ -697,6 +698,12 @@ class SupabaseClient:
                                 # Get quantity
                                 if item.get('quantity'):
                                     quantities.append(item['quantity'])
+                                
+                                # Get unit (kg or piece)
+                                if item.get('unit'):
+                                    units.append(item['unit'])
+                                else:
+                                    units.append('piece')  # Default fallback
                         
                         # Add parsed data to order
                         order['parsed_items'] = {
@@ -704,6 +711,7 @@ class SupabaseClient:
                             'seller_ids': list(set(seller_ids)),  # Remove duplicates
                             'product_ids': product_ids,
                             'quantities': quantities,
+                            'units': units,  # Add units array
                             'total_products': len(items)
                         }
                         
@@ -721,6 +729,8 @@ class SupabaseClient:
                             'product_names': [],
                             'seller_ids': [],
                             'product_ids': [],
+                            'quantities': [],
+                            'units': [],  # Add empty units array
                             'total_products': 0
                         }
                         order['formatted_products'] = "Error loading product details"
@@ -729,6 +739,8 @@ class SupabaseClient:
                         'product_names': [],
                         'seller_ids': [],
                         'product_ids': [],
+                        'quantities': [],
+                        'units': [],  # Add empty units array
                         'total_products': 0
                     }
                     order['formatted_products'] = "No items data"
