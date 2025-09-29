@@ -608,6 +608,14 @@ def api_order_create_by_seller():
             if not created_order:
                 return jsonify({'success': False, 'error': f'Failed to create order for {item.get("name", "product")}'})
             
+            # Reduce stock for this product
+            product_id = item.get('product_id')
+            quantity_ordered = item.get('quantity', 1)
+            if product_id and quantity_ordered > 0:
+                stock_reduced = supabase_client.reduce_product_stock(product_id, quantity_ordered)
+                if not stock_reduced:
+                    print(f"Warning: Failed to reduce stock for product {product_id}")
+            
             created_orders.append({
                 'order_id': created_order.get('id'),
                 'order_number': order_number,
@@ -763,6 +771,17 @@ def delete_order(order_id):
         
         if order.get('status') != 'pending':
             return jsonify({'success': False, 'error': 'Only pending orders can be deleted'})
+        
+        # Restore stock for items in this order before deleting
+        order_items = order.get('items', [])
+        for item in order_items:
+            product_id = item.get('product_id')
+            quantity = item.get('quantity', 1)
+            
+            if product_id and quantity > 0:
+                stock_restored = supabase_client.restore_product_stock(product_id, quantity)
+                if not stock_restored:
+                    print(f"Warning: Failed to restore stock for product {product_id}")
         
         # Delete the order
         result = supabase_client.delete_order(order_id)

@@ -588,6 +588,62 @@ class SupabaseClient:
             
         except Exception as e:
             return {'valid': False, 'error': f'Validation error: {str(e)}'}
+
+    def reduce_product_stock(self, product_id: int, quantity: int) -> bool:
+        """Reduce product stock after successful order creation"""
+        try:
+            # First get current stock
+            response = self.client.table('products').select('stock').eq('id', product_id).execute()
+            if not response.data:
+                print(f"Product {product_id} not found")
+                return False
+            
+            current_stock = response.data[0].get('stock', 0)
+            new_stock = max(0, current_stock - quantity)  # Ensure stock doesn't go below 0
+            
+            # Update stock
+            update_response = self.client.table('products').update({
+                'stock': new_stock
+            }).eq('id', product_id).execute()
+            
+            if update_response.data:
+                print(f"Stock reduced for product {product_id}: {current_stock} -> {new_stock}")
+                return True
+            else:
+                print(f"Failed to update stock for product {product_id}")
+                return False
+                
+        except Exception as e:
+            print(f"Error reducing product stock: {e}")
+            return False
+
+    def restore_product_stock(self, product_id: int, quantity: int) -> bool:
+        """Restore product stock after order cancellation/deletion"""
+        try:
+            # First get current stock
+            response = self.client.table('products').select('stock').eq('id', product_id).execute()
+            if not response.data:
+                print(f"Product {product_id} not found")
+                return False
+            
+            current_stock = response.data[0].get('stock', 0)
+            new_stock = current_stock + quantity  # Add back the cancelled quantity
+            
+            # Update stock
+            update_response = self.client.table('products').update({
+                'stock': new_stock
+            }).eq('id', product_id).execute()
+            
+            if update_response.data:
+                print(f"Stock restored for product {product_id}: {current_stock} -> {new_stock}")
+                return True
+            else:
+                print(f"Failed to restore stock for product {product_id}")
+                return False
+                
+        except Exception as e:
+            print(f"Error restoring product stock: {e}")
+            return False
     
     # Order Management Methods
     def create_order(self, user_id: int, items: List[Dict], total_price: float) -> Dict[str, Any]:
