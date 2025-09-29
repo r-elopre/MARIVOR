@@ -32,8 +32,8 @@
     </div>
     <div class="col-6 col-md-3">
         <div class="stat-card text-center">
-            <div class="stat-number text-success">{{ orders|selectattr('status', 'eq', 'completed')|list|length if orders else 0 }}</div>
-            <h6 class="text-muted">Completed</h6>
+            <div class="stat-number text-primary">{{ orders|selectattr('status', 'eq', 'on_delivery')|list|length if orders else 0 }}</div>
+            <h6 class="text-muted">On Delivery</h6>
         </div>
     </div>
 </div>
@@ -43,22 +43,27 @@
     <div class="card-header border-0">
         <ul class="nav nav-tabs card-header-tabs" id="orderTabs" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab">
+                <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab" data-status="active">
                     <i class="bi bi-list-ul"></i> All Orders
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" type="button" role="tab">
+                <button class="nav-link" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" type="button" role="tab" data-status="pending">
                     <i class="bi bi-clock"></i> Pending
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="processing-tab" data-bs-toggle="tab" data-bs-target="#processing" type="button" role="tab">
+                <button class="nav-link" id="processing-tab" data-bs-toggle="tab" data-bs-target="#processing" type="button" role="tab" data-status="processing">
                     <i class="bi bi-gear"></i> Processing
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="completed-tab" data-bs-toggle="tab" data-bs-target="#completed" type="button" role="tab">
+                <button class="nav-link" id="on-delivery-tab" data-bs-toggle="tab" data-bs-target="#on-delivery" type="button" role="tab" data-status="on_delivery">
+                    <i class="bi bi-truck"></i> On Delivery
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="completed-tab" data-bs-toggle="tab" data-bs-target="#completed" type="button" role="tab" data-status="completed">
                     <i class="bi bi-check-circle"></i> Completed
                 </button>
             </li>
@@ -68,7 +73,7 @@
 
 <!-- Orders Content -->
 <div class="tab-content" id="orderTabsContent">
-    <!-- All Orders Tab -->
+    <!-- All Orders Tab (Active Orders Only) -->
     <div class="tab-pane fade show active" id="all" role="tabpanel">
         <!-- Desktop Table View -->
         <div class="seller-table d-none d-lg-block">
@@ -85,204 +90,132 @@
                             <th>Date</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        {% if orders %}
-                            {% for order in orders %}
-                            <tr>
-                                <td>
-                                    <small class="text-muted">{{ order.order_number or order.id }}</small>
-                                </td>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <div class="me-2">
-                                            {% if order.face_photo_front %}
-                                                <img src="{{ order.face_photo_front }}" alt="Customer" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">
-                                            {% else %}
-                                                <i class="bi bi-person-circle fs-4 text-muted"></i>
-                                            {% endif %}
-                                        </div>
-                                        <div>
-                                            <div class="fw-bold">{{ order.customer_name or 'Anonymous' }}</div>
-                                            <small class="text-muted">{{ order.customer_phone or 'No phone' }}</small>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        {% if order.first_product_image %}
-                                            <img src="{{ order.first_product_image }}" alt="Product" class="rounded me-2" style="width: 40px; height: 40px; object-fit: cover;">
-                                        {% else %}
-                                            <div class="bg-light rounded d-flex align-items-center justify-content-center me-2" style="width: 40px; height: 40px;">
-                                                <i class="bi bi-image text-muted"></i>
-                                            </div>
-                                        {% endif %}
-                                        <div>
-                                            <div class="fw-bold">{{ order.first_product_name or 'Unknown Product' }}</div>
-                                            <small class="text-muted">
-                                                {% if order.item_count > 1 %}
-                                                    +{{ order.item_count - 1 }} more items
-                                                {% endif %}
-                                            </small>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="fw-bold">{{ order.total_items_count or 1 }}</td>
-                                <td class="fw-bold">{{ order.total_amount_formatted or "₱0.00" }}</td>
-                                <td>
-                                    {% if order.status == 'pending' %}
-                                        <span class="badge bg-warning">Pending</span>
-                                    {% elif order.status == 'processing' %}
-                                        <span class="badge bg-info">Processing</span>
-                                    {% elif order.status == 'shipped' %}
-                                        <span class="badge bg-primary">Shipped</span>
-                                    {% elif order.status == 'completed' %}
-                                        <span class="badge bg-success">Completed</span>
-                                    {% elif order.status == 'cancelled' %}
-                                        <span class="badge bg-danger">Cancelled</span>
-                                    {% else %}
-                                        <span class="badge bg-secondary">{{ order.status or 'Unknown' }}</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <small class="text-muted">{{ order.created_at_manila or order.created_at }}</small>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        {% else %}
-                            <tr>
-                                <td colspan="8" class="text-center py-5">
-                                    <div class="text-muted">
-                                        <i class="bi bi-inbox fs-1 d-block mb-3"></i>
-                                        <h5>No orders yet</h5>
-                                        <p class="mb-3">Orders for your products will appear here once customers start purchasing.</p>
-                                        <a href="{{ url_for('seller_products') }}" class="btn btn-primary">
-                                            <i class="bi bi-grid-3x3-gap"></i> Manage Products
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                        {% endif %}
+                    <tbody id="ordersTableBody">
+                        <!-- Orders will be populated by JavaScript -->
                     </tbody>
                 </table>
             </div>
         </div>
 
         <!-- Mobile Card View -->
-        <div class="d-block d-lg-none">
-            {% if orders %}
-                {% for order in orders %}
-                <div class="card mb-3 shadow-sm">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start mb-3">
-                            <div>
-                                <h6 class="mb-1">{{ order.order_number or order.id }}</h6>
-                            </div>
-                            <div class="text-end">
-                                {% if order.status == 'pending' %}
-                                    <span class="badge bg-warning">{{ order.status.title() }}</span>
-                                {% elif order.status == 'processing' %}
-                                    <span class="badge bg-info">{{ order.status.title() }}</span>
-                                {% elif order.status == 'shipped' %}
-                                    <span class="badge bg-primary">{{ order.status.title() }}</span>
-                                {% elif order.status == 'completed' %}
-                                    <span class="badge bg-success">{{ order.status.title() }}</span>
-                                {% elif order.status == 'cancelled' %}
-                                    <span class="badge bg-danger">{{ order.status.title() }}</span>
-                                {% else %}
-                                    <span class="badge bg-secondary">{{ order.status.title() }}</span>
-                                {% endif %}
-                            </div>
-                        </div>
-
-                        <div class="row g-3">
-                            <!-- Customer Info -->
-                            <div class="col-6">
-                                <div class="d-flex align-items-center">
-                                    <div class="me-2">
-                                        {% if order.face_photo_front %}
-                                            <img src="{{ order.face_photo_front }}" alt="Customer" class="rounded-circle" style="width: 35px; height: 35px; object-fit: cover;">
-                                        {% else %}
-                                            <i class="bi bi-person-circle fs-5 text-muted"></i>
-                                        {% endif %}
-                                    </div>
-                                    <div class="flex-grow-1 min-w-0">
-                                        <div class="fw-bold small">{{ order.customer_name or 'Anonymous' }}</div>
-                                        <div class="text-muted small text-truncate">{{ order.customer_phone or 'No phone' }}</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Product Info -->
-                            <div class="col-6">
-                                <div class="d-flex align-items-center">
-                                    <div class="me-2">
-                                        {% if order.first_product_image %}
-                                            <img src="{{ order.first_product_image }}" alt="Product" class="rounded" style="width: 35px; height: 35px; object-fit: cover;">
-                                        {% else %}
-                                            <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
-                                                <i class="bi bi-image text-muted"></i>
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                    <div class="flex-grow-1 min-w-0">
-                                        <div class="fw-bold small text-truncate">{{ order.first_product_name or 'Unknown Product' }}</div>
-                                        <div class="text-muted small">
-                                            Qty: {{ order.total_items_count }}
-                                            {% if order.item_count > 1 %}
-                                                <span class="text-info">+{{ order.item_count - 1 }} more</span>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <hr class="my-3">
-
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <div class="fw-bold text-success">{{ order.total_amount_formatted }}</div>
-                                <small class="text-muted">{{ order.created_at_manila or 'N/A' }}</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            {% else %}
-                <div class="text-center py-5 text-muted">
-                    <i class="bi bi-inbox fs-1 d-block mb-3"></i>
-                    <h5>No orders yet</h5>
-                    <p class="mb-3">Orders for your products will appear here once customers start purchasing.</p>
-                    <a href="{{ url_for('seller_products') }}" class="btn btn-primary">
-                        <i class="bi bi-grid-3x3-gap"></i> Manage Products
-                    </a>
-                </div>
-            {% endif %}
+        <div class="d-block d-lg-none" id="ordersMobileCards">
+            <!-- Orders will be populated by JavaScript -->
         </div>
     </div>
     
-    <!-- Other tabs would have similar content filtered by status -->
+    <!-- Pending Orders Tab -->
     <div class="tab-pane fade" id="pending" role="tabpanel">
-        <div class="text-center py-5 text-muted">
-            <i class="bi bi-clock fs-1 d-block mb-3"></i>
-            <h5>Pending Orders</h5>
-            <p>Orders waiting for your action will appear here.</p>
+        <!-- Desktop Table View -->
+        <div class="seller-table d-none d-lg-block">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Customer</th>
+                            <th>Product</th>
+                            <th>Quantity</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pendingTableBody">
+                        <!-- Orders will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <!-- Mobile Card View -->
+        <div class="d-block d-lg-none" id="pendingMobileCards">
+            <!-- Orders will be populated by JavaScript -->
         </div>
     </div>
     
+    <!-- Processing Orders Tab -->
     <div class="tab-pane fade" id="processing" role="tabpanel">
-        <div class="text-center py-5 text-muted">
-            <i class="bi bi-gear fs-1 d-block mb-3"></i>
-            <h5>Processing Orders</h5>
-            <p>Orders currently being processed will appear here.</p>
+        <!-- Desktop Table View -->
+        <div class="seller-table d-none d-lg-block">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Customer</th>
+                            <th>Product</th>
+                            <th>Quantity</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="processingTableBody">
+                        <!-- Orders will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <!-- Mobile Card View -->
+        <div class="d-block d-lg-none" id="processingMobileCards">
+            <!-- Orders will be populated by JavaScript -->
         </div>
     </div>
     
+    <!-- On Delivery Orders Tab -->
+    <div class="tab-pane fade" id="on-delivery" role="tabpanel">
+        <!-- Desktop Table View -->
+        <div class="seller-table d-none d-lg-block">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Customer</th>
+                            <th>Product</th>
+                            <th>Quantity</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="onDeliveryTableBody">
+                        <!-- Orders will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <!-- Mobile Card View -->
+        <div class="d-block d-lg-none" id="onDeliveryMobileCards">
+            <!-- Orders will be populated by JavaScript -->
+        </div>
+    </div>
+    
+    <!-- Completed Orders Tab -->
     <div class="tab-pane fade" id="completed" role="tabpanel">
-        <div class="text-center py-5 text-muted">
-            <i class="bi bi-check-circle fs-1 d-block mb-3"></i>
-            <h5>Completed Orders</h5>
-            <p>Successfully completed orders will appear here.</p>
+        <!-- Desktop Table View -->
+        <div class="seller-table d-none d-lg-block">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Customer</th>
+                            <th>Product</th>
+                            <th>Quantity</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="completedTableBody">
+                        <!-- Orders will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <!-- Mobile Card View -->
+        <div class="d-block d-lg-none" id="completedMobileCards">
+            <!-- Orders will be populated by JavaScript -->
         </div>
     </div>
 </div>
@@ -312,30 +245,220 @@
 
 {% block extra_scripts %}
 <script>
+// Store all orders data for filtering
+const allOrders = {{ orders | tojson }};
+
 document.addEventListener('DOMContentLoaded', function() {
-    // Handle view order buttons
-    document.querySelectorAll('.view-order-btn').forEach(function(button) {
-        button.addEventListener('click', function() {
-            const orderId = this.getAttribute('data-order-id');
-            viewOrder(orderId);
+    // Initialize the page with all orders displayed
+    showOrdersByStatus('active');
+    
+    // Handle tab switching
+    document.querySelectorAll('[data-bs-toggle="tab"]').forEach(function(tab) {
+        tab.addEventListener('shown.bs.tab', function(e) {
+            const status = e.target.getAttribute('data-status');
+            showOrdersByStatus(status);
         });
     });
 });
 
+function showOrdersByStatus(status) {
+    let filteredOrders;
+    
+    if (status === 'active') {
+        // All Orders tab - show active orders only (exclude completed)
+        filteredOrders = allOrders.filter(order => 
+            ['pending', 'processing', 'on_delivery', 'cancelled'].includes(order.status)
+        );
+    } else {
+        // Specific status tab
+        filteredOrders = allOrders.filter(order => order.status === status);
+    }
+    
+    // Update the appropriate containers
+    const tabId = status === 'active' ? 'all' : status;
+    updateDesktopTable(tabId, filteredOrders);
+    updateMobileCards(tabId, filteredOrders);
+}
+
+function updateDesktopTable(tabId, orders) {
+    // Handle special case for on_delivery -> onDelivery camelCase conversion
+    let tableBodyId;
+    if (tabId === 'all') {
+        tableBodyId = 'ordersTableBody';
+    } else if (tabId === 'on_delivery') {
+        tableBodyId = 'onDeliveryTableBody';
+    } else {
+        tableBodyId = `${tabId}TableBody`;
+    }
+    
+    const tableBody = document.getElementById(tableBodyId);
+    if (!tableBody) return;
+    
+    if (orders.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center py-5">
+                    <div class="text-muted">
+                        <i class="bi bi-inbox fs-1 d-block mb-3"></i>
+                        <h5>No orders found</h5>
+                        <p class="mb-3">No orders with this status yet.</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    let tableHTML = '';
+    orders.forEach(order => {
+        const statusBadge = getStatusBadge(order.status);
+        const customerImage = order.face_photo_front 
+            ? `<img src="${order.face_photo_front}" alt="Customer" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">`
+            : `<i class="bi bi-person-circle fs-4 text-muted"></i>`;
+        const productImage = order.first_product_image
+            ? `<img src="${order.first_product_image}" alt="Product" class="rounded me-2" style="width: 40px; height: 40px; object-fit: cover;">`
+            : `<div class="bg-light rounded d-flex align-items-center justify-content-center me-2" style="width: 40px; height: 40px;"><i class="bi bi-image text-muted"></i></div>`;
+        
+        tableHTML += `
+            <tr>
+                <td><small class="text-muted">${order.order_number || order.id}</small></td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="me-2">${customerImage}</div>
+                        <div>
+                            <div class="fw-bold">${order.customer_name || 'Anonymous'}</div>
+                            <small class="text-muted">${order.customer_phone || 'No phone'}</small>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        ${productImage}
+                        <div>
+                            <div class="fw-bold">${order.first_product_name || 'Unknown Product'}</div>
+                            <small class="text-muted">
+                                ${order.item_count > 1 ? `+${order.item_count - 1} more items` : ''}
+                            </small>
+                        </div>
+                    </div>
+                </td>
+                <td class="fw-bold">${order.total_items_count || 1}</td>
+                <td class="fw-bold">${order.total_amount_formatted || '₱0.00'}</td>
+                <td>${statusBadge}</td>
+                <td><small class="text-muted">${order.created_at_manila || order.created_at}</small></td>
+            </tr>
+        `;
+    });
+    
+    tableBody.innerHTML = tableHTML;
+}
+
+function updateMobileCards(tabId, orders) {
+    // Handle special case for on_delivery -> onDelivery camelCase conversion
+    let cardsContainerId;
+    if (tabId === 'all') {
+        cardsContainerId = 'ordersMobileCards';
+    } else if (tabId === 'on_delivery') {
+        cardsContainerId = 'onDeliveryMobileCards';
+    } else {
+        cardsContainerId = `${tabId}MobileCards`;
+    }
+    
+    const cardsContainer = document.getElementById(cardsContainerId);
+    if (!cardsContainer) return;
+    
+    if (orders.length === 0) {
+        cardsContainer.innerHTML = `
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-inbox fs-1 d-block mb-3"></i>
+                <h5>No orders found</h5>
+                <p class="mb-3">No orders with this status yet.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let cardsHTML = '';
+    orders.forEach(order => {
+        const statusBadge = getStatusBadge(order.status);
+        const customerImage = order.face_photo_front 
+            ? `<img src="${order.face_photo_front}" alt="Customer" class="rounded-circle" style="width: 35px; height: 35px; object-fit: cover;">`
+            : `<i class="bi bi-person-circle fs-5 text-muted"></i>`;
+        const productImage = order.first_product_image
+            ? `<img src="${order.first_product_image}" alt="Product" class="rounded" style="width: 35px; height: 35px; object-fit: cover;">`
+            : `<div class="bg-light rounded d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;"><i class="bi bi-image text-muted"></i></div>`;
+        
+        cardsHTML += `
+            <div class="card mb-3 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h6 class="mb-1">${order.order_number || order.id}</h6>
+                        </div>
+                        <div class="text-end">
+                            ${statusBadge}
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <div class="d-flex align-items-center">
+                                <div class="me-2">${customerImage}</div>
+                                <div class="flex-grow-1 min-w-0">
+                                    <div class="fw-bold small">${order.customer_name || 'Anonymous'}</div>
+                                    <div class="text-muted small text-truncate">${order.customer_phone || 'No phone'}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="d-flex align-items-center">
+                                <div class="me-2">${productImage}</div>
+                                <div class="flex-grow-1 min-w-0">
+                                    <div class="fw-bold small text-truncate">${order.first_product_name || 'Unknown Product'}</div>
+                                    <div class="text-muted small">
+                                        Qty: ${order.total_items_count}
+                                        ${order.item_count > 1 ? `<span class="text-info">+${order.item_count - 1} more</span>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr class="my-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="fw-bold text-success">${order.total_amount_formatted}</div>
+                            <small class="text-muted">${order.created_at_manila || 'N/A'}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    cardsContainer.innerHTML = cardsHTML;
+}
+
+function getStatusBadge(status) {
+    const statusConfig = {
+        'pending': { class: 'bg-warning', text: 'Pending' },
+        'processing': { class: 'bg-info', text: 'Processing' },
+        'on_delivery': { class: 'bg-primary', text: 'On Delivery' },
+        'completed': { class: 'bg-success', text: 'Completed' },
+        'cancelled': { class: 'bg-danger', text: 'Cancelled' }
+    };
+    
+    const config = statusConfig[status] || { class: 'bg-secondary', text: status || 'Unknown' };
+    return `<span class="badge ${config.class}">${config.text}</span>`;
+}
+
 function viewOrder(orderId) {
     const modal = new bootstrap.Modal(document.getElementById('orderModal'));
     
-    // Find the order data from the table
-    const orderRow = document.querySelector(`[data-order-id="${orderId}"]`).closest('tr');
-    const orderData = {
-        id: orderId,
-        customer: orderRow.cells[1].textContent.trim(),
-        products: orderRow.cells[2].textContent.trim(),
-        quantity: orderRow.cells[3].textContent.trim(),
-        total: orderRow.cells[4].textContent.trim(),
-        status: orderRow.cells[5].textContent.trim(),
-        date: orderRow.cells[6].textContent.trim()
-    };
+    // Find the order data
+    const order = allOrders.find(o => o.id == orderId);
+    if (!order) {
+        console.error('Order not found:', orderId);
+        return;
+    }
     
     // Show modal with order details
     document.getElementById('orderDetails').innerHTML = `
@@ -343,18 +466,19 @@ function viewOrder(orderId) {
             <div class="col-md-6">
                 <h6 class="text-muted">Order Information</h6>
                 <table class="table table-borderless table-sm">
-                    <tr><td><strong>Order ID:</strong></td><td>#${orderData.id}</td></tr>
-                    <tr><td><strong>Status:</strong></td><td>${orderData.status}</td></tr>
-                    <tr><td><strong>Date:</strong></td><td>${orderData.date}</td></tr>
-                    <tr><td><strong>Total:</strong></td><td>${orderData.total}</td></tr>
+                    <tr><td><strong>Order ID:</strong></td><td>#${order.id}</td></tr>
+                    <tr><td><strong>Status:</strong></td><td>${getStatusBadge(order.status)}</td></tr>
+                    <tr><td><strong>Date:</strong></td><td>${order.created_at_manila || order.created_at}</td></tr>
+                    <tr><td><strong>Total:</strong></td><td>${order.total_amount_formatted}</td></tr>
                 </table>
             </div>
             <div class="col-md-6">
                 <h6 class="text-muted">Customer Information</h6>
                 <table class="table table-borderless table-sm">
-                    <tr><td><strong>Customer:</strong></td><td>${orderData.customer}</td></tr>
-                    <tr><td><strong>Items:</strong></td><td>${orderData.quantity} item(s)</td></tr>
-                    <tr><td><strong>Products:</strong></td><td>${orderData.products}</td></tr>
+                    <tr><td><strong>Customer:</strong></td><td>${order.customer_name || 'Anonymous'}</td></tr>
+                    <tr><td><strong>Phone:</strong></td><td>${order.customer_phone || 'No phone'}</td></tr>
+                    <tr><td><strong>Items:</strong></td><td>${order.total_items_count} item(s)</td></tr>
+                    <tr><td><strong>Products:</strong></td><td>${order.first_product_name || 'Unknown Product'}</td></tr>
                 </table>
             </div>
         </div>
